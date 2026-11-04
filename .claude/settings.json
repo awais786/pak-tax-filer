@@ -31,6 +31,18 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pr-cost-comment.sh",
+            "timeout": 30,
+            "statusMessage": "Posting session usage to PR..."
+          }
+        ]
+      }
     ]
   }
 }

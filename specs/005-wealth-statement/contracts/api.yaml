@@ -1,0 +1,56 @@
+# Machine-checkable subset of wealth-api.md (feature 005), checked by
+# scripts/validate_contracts.py against the app's OpenAPI schema. The Markdown
+# stays the full contract; change both together (docs/contracts.md).
+openapi: 3.1.0
+info:
+  title: Feature 005 contract
+  version: 1.0.0
+paths:
+  /api/wealth/{tax_year}:
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - tax_year
+                - statement
+                - auto_filled
+                - certificates_changed
+                - result
+                - label
+    put:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - previous_net_assets
+              - assets
+              - liabilities
+              - other_exempt_income
+              - foreign_remittance
+              - inheritance
+              - gifts_received
+              - family_contribution
+              - gifts_given
+              - expenses
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - tax_year
+                - statement
+                - auto_filled
+                - certificates_changed
+                - result
+                - label

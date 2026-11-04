@@ -13,7 +13,10 @@ approval on any change to `backend/app/tax/rates/`, a bash `PostToolUse` hook th
 written files, and shared permissions, all added to his files rather than replacing them. Update the README's
 setup section for FastAPI. For the lead's issues #4 and #5 (User Story 4): a GitHub Actions CI
 workflow, backend and frontend `CLAUDE.md` files, topic rules, three skills, two review
-subagents and a written API convention. Decisions and alternatives are in
+subagents and a written API convention. For the lead's issue #16 (User Story 5): a
+machine-checkable `contracts/api.yaml` per feature, one `scripts/validate_contracts.py` checked
+against the app's generated OpenAPI schema, data model and task list, a `Stop` hook that blocks a
+completion claim while it fails, and a `contracts` CI job. Decisions and alternatives are in
 [research.md](research.md).
 
 ## Technical Context
@@ -69,11 +72,12 @@ data.
 ```text
 specs/001-repo-foundations/
 ├── plan.md              # This file
-├── research.md          # Decisions R1–R10
+├── research.md          # Decisions R1–R13
 ├── data-model.md        # None for 001
 ├── quickstart.md        # Validation guide
 ├── contracts/
 │   ├── health.md          # GET /health
+│   ├── api.yaml           # machine-checkable /health (R11)
 │   ├── claude-hooks.md    # Hooks and permissions
 │   └── api-conventions.md # API standard (published as docs/api-conventions.md)
 └── tasks.md             # Created by /speckit-tasks
@@ -87,8 +91,12 @@ docker-compose.yml          # db, backend, frontend
 CLAUDE.md                   # the lead's root guide (#10), extended (R9)
 README.md                   # setup section updated for FastAPI
 docs/api-conventions.md     # API standard (R10)
+docs/contracts.md           # defining contracts, running the check, reading failures (R11)
+scripts/
+├── validate_contracts.py   # the contract check (R11)
+└── tests/                  # pytest with a sample app and sample specs
 
-.github/workflows/ci.yml    # backend, frontend and hooks jobs (R8)
+.github/workflows/ci.yml    # backend, frontend, hooks and contracts jobs (R8, R13)
 
 .claude/
 ├── settings.json           # the lead's hooks (#10) + ours + permissions
@@ -100,6 +108,7 @@ docs/api-conventions.md     # API standard (R10)
     ├── git-safety.sh, check-python.sh, check-frontend.sh   # the lead's (#10), unchanged
     ├── tax-rates-guard.sh  # PreToolUse: ask on tax-rates changes
     ├── format-on-write.sh  # PostToolUse: Ruff / Prettier
+    ├── contracts-gate.sh   # Stop: contract check, blocks a completion claim (R12)
     └── tests/              # pytest runs every hook with sample JSON (host and CI)
 
 backend/

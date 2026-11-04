@@ -56,6 +56,61 @@ Saifullah:
 | Hook style | **bash + `jq`, like his**; `jq` becomes a prerequisite | Python via `uv` (two styles in one repo) |
 | `python-django.md` | **renamed `python-backend.md`, minimally edited for FastAPI + Alembic**, flagged in PR #3 for the lead | leaving it and adding `backend.md` (contradictory instructions) |
 
+## Addendum (2026-11-04): contract validation (lead's issue #16)
+
+The lead asked (issue #16) for automated contract validation: machine-checkable contracts,
+Claude Code hooks that check them during implementation and refuse "done" while mandatory checks
+fail, reusable scripts with proper exit codes, Spec Kit integration without duplicating it, and
+the same scripts in CI blocking merges; smallest practical solution, existing tools reused. It is
+project setup, so it joins this feature as **User Story 5** (as issues #4 and #5 became User
+Story 4). Decided by Saifullah:
+
+| Decision | Chosen | Rejected |
+|---|---|---|
+| Where | **Feature 001, User Story 5** | a separate chore PR (outside the 8-feature structure) |
+| How contracts become checkable | **A. a small `contracts/api.yaml` (OpenAPI paths subset) per feature with an API, plus one script comparing it with the app's generated OpenAPI schema; the same script checks the MCP tool list and database tables** | B. contract tests only (checks only what someone remembered); C. OpenAPI snapshot + drift check (catches changes, not whether the app matches the spec) |
+
+- **What is checked (deterministic):**
+  - API: every path, method, status code and required field in each `api.yaml` exists in the
+    app's OpenAPI schema (generated in-process, no server); endpoints in the app missing from
+    every `api.yaml` are reported too.
+  - MCP: exactly the three tools named in 006's contract.
+  - Database: each table and column in a feature's `data-model.md` exists in the app's
+    SQLAlchemy metadata (read from the existing Markdown tables, no extra file).
+  - Spec Kit: a feature can't be called complete while its `tasks.md` has unchecked tasks.
+- **Semantic review stays separate:** `speckit-converge` (compares code with spec, plan, tasks)
+  and `speckit-analyze` run before a feature's PR; they are not pass/fail scripts.
+- **Hook:** a Claude Code `Stop` hook runs the script for the features whose files changed in
+  the session and blocks stopping with the script's messages while it fails; nothing runs after
+  every edit (issue #16: no expensive checks per edit).
+- **CI:** a `contracts` job runs the same script for all features; failing blocks merge.
+- **Contract files for 001–008** are written now from their existing Markdown contracts, which
+  are not changed (001's covers `/health`). *(Builder's call: issue #16 point 1, "identify and
+  make machine-verifiable".)*
+- **Which features are checked:** a feature is checked once it has started (at least one task
+  ticked in its `tasks.md`); features not started are skipped, so CI is green while 002–008 are
+  still specs. For a started feature, its contract checks must pass and, once its last task is
+  ticked, no non-manual task may be unchecked. Endpoints in the app missing from every
+  `api.yaml` fail the run, except FastAPI's own `/openapi.json`, `/docs`, `/redoc`.
+  *(Builder's call.)*
+- **Manual tasks** (a human check, a second OS, a deliberately failing PR) are marked `(manual)`
+  in `tasks.md` and never counted by the script. *(Builder's call.)*
+- **Hook behaviour:** the `Stop` hook checks the current branch's feature (Spec Kit's `NNN-`
+  branch convention). Mid-feature it shows contract failures in the session without
+  blocking; once the feature's last non-manual task is ticked (a completion claim) it **blocks**
+  stopping until every check passes. *(Builder's call: issue #16 point 2, "not complete while
+  failing".)*
+- **Strictness:** checked from the OpenAPI schema: path, method, success status, required
+  request fields and response fields. This adds one convention to `api-conventions.md`: every
+  route declares a `response_model`. Error statuses (401, 404, 409, 429) are already covered by
+  each feature's API tests, which the hook and CI run. *(Builder's call: avoids requiring every
+  error response to be declared in code.)*
+- **Blocking merges:** the `contracts` job only blocks once it is a required status check on
+  `main`; that repository setting is the lead's, so the PR asks him to enable it (as T043 asks
+  about his hook). *(Builder's call.)*
+- **Docs:** a section in `CLAUDE.md` and `docs/contracts.md` on defining a contract, running the
+  check locally and reading failures.
+
 ## Decisions
 
 - **Guard behaviour:** ask for approval, not block (decided by Saifullah).

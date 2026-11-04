@@ -14,8 +14,9 @@ input. (Amended 2026-11-04.)
 | `check-frontend.sh` | `PostToolUse`: the frontend's `lint` script | lead (#10) |
 | `tax-rates-guard.sh` | `PreToolUse`: asks on tax-rates changes | 001 |
 | `format-on-write.sh` | `PostToolUse`: Ruff / Prettier formatting | 001 |
+| `contracts-gate.sh` | `Stop`: contract check for the branch's feature (issue #16) | 001 |
 
-All five are tested by `pytest .claude/hooks/tests` with sample JSON inputs (CI hooks job).
+All six are tested by `pytest .claude/hooks/tests` with sample JSON inputs (CI hooks job).
 
 ## Tax-rates guard (`PreToolUse`, `tax-rates-guard.sh`)
 
@@ -58,3 +59,18 @@ All five are tested by `pytest .claude/hooks/tests` with sample JSON inputs (CI 
 | deny | reading `.env`, `.env.*` |
 
 Anything not listed falls back to Claude Code's default of asking. Covers spec FR-011, FR-012.
+
+## Contract gate (`Stop`, `contracts-gate.sh`; added for issue #16)
+
+- **Feature:** from the branch name `NNN-…`; any other branch → exit 0, no output.
+- **Runs:** `uv run --project backend python scripts/validate_contracts.py --feature NNN`.
+- **Outputs:**
+
+  | Check result | Feature state | Output |
+  |---|---|---|
+  | pass (exit 0) | any | none |
+  | violations (exit 1) | unticked non-manual tasks remain | `{"systemMessage": "<violations>"}` |
+  | violations (exit 1) | all non-manual tasks ticked | `{"decision": "block", "reason": "<violations>"}` |
+  | setup error (exit 2) | any | `{"systemMessage": "Contract check could not run: <error>"}` |
+
+- Never runs per edit. Covers spec FR-024, User Story 5.

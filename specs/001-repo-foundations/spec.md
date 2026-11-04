@@ -19,6 +19,8 @@
 ### Session 2026-11-04
 
 - Q: Now that the hooks are bash scripts (like the lead's #10), what automated checks run on them? → A: Tests only: CI runs each hook (ours and the lead's) against sample inputs and checks the response; no lint or type checks for bash.
+- Q: The lead's issue #16 asks for automated contract validation (machine-checkable contracts, hooks, reusable scripts, Spec Kit integration, CI); where does it go? → A: Into feature 001 as User Story 5 (FR-021 to FR-027), like issues #4/#5 became User Story 4. Contracts become a small machine-checkable file per feature checked against the app's generated API schema (design addendum, approach A).
+- Q: When should the check block the AI assistant from finishing? → A: Only when the current feature's last non-manual task is ticked (a completion claim); mid-feature it shows failures without blocking. Features not started are skipped, and tasks marked `(manual)` are never counted.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -144,6 +146,45 @@ backend feature and a code review; the matching guide and reviewer are used.
 6. **Given** a new API endpoint, **When** it is designed, **Then** a written API convention
    defines its path, request and response shapes, errors and authentication.
 
+---
+
+### User Story 5 - Contracts are checked automatically (Priority: P5)
+
+Added at the lead's request (issue #16). Each feature's API, database tables and task list are
+checked automatically against what its spec promises: while the AI assistant implements a
+feature, when it tries to call the feature finished, and on every pull request. Problems come
+with a message naming the feature and what is wrong, and a feature can't be called complete or
+merged while a mandatory check fails.
+
+**Why this priority**: it protects every later feature from drifting away from its spec, but
+needs the app (Story 1), the hooks setup (Story 3) and CI (Story 4) to exist first.
+
+**Independent Test**: plant one violation of each kind in a throwaway change (an endpoint
+missing from the app, a missing field, a missing database column, a fourth MCP tool, an unticked
+task when the feature is claimed done) and check that the script, the assistant hook and the
+pull request each report it by name and fail; remove it and check all pass.
+
+**Acceptance Scenarios**:
+
+1. **Given** a started feature whose app is missing an endpoint, method, success status or
+   required field from its contract, **When** the check runs, **Then** it fails naming the
+   feature, the contract file and the item.
+2. **Given** an endpoint in the app that no feature's contract lists, **When** the check runs,
+   **Then** it fails naming the endpoint (the framework's own documentation pages excepted).
+3. **Given** a started feature whose data model lists a table or column the app lacks, **When**
+   the check runs, **Then** it fails naming the table or column.
+4. **Given** features that have not started, **When** the check runs, **Then** they are skipped
+   and do not fail it.
+5. **Given** the assistant is mid-feature, **When** it finishes a turn with failing checks,
+   **Then** the failures are shown and work is not stopped.
+6. **Given** the current feature's last non-manual task is ticked, **When** the assistant tries
+   to finish with any check failing, **Then** it is refused with the failure messages.
+7. **Given** a pull request, **When** it is opened or updated, **Then** the same check runs and a
+   failure marks the pull request failing.
+8. **Given** a feature is ready for its pull request, **When** the developer reviews it, **Then**
+   Spec Kit's own comparison of code with spec, plan and tasks is used, separately from the
+   pass/fail check.
+
 ### Edge Cases
 
 - A required port (backend or frontend) is already in use on the developer's machine: the
@@ -158,6 +199,12 @@ backend feature and a code review; the matching guide and reviewer are used.
   lost.
 - A contributor works on Windows, macOS or Linux: the guard and formatting behave the same on
   all three.
+- A started feature has an API but no machine-checkable contract file: the check fails, naming
+  the missing file.
+- A task can only be done by a person (a manual check, a second operating system): it is marked
+  `(manual)` and never blocks the assistant.
+- The developer stops a session while the completion check is failing: they can; the pull
+  request check still blocks the merge.
 
 ## Requirements *(mandatory)*
 
@@ -210,6 +257,26 @@ backend feature and a code review; the matching guide and reviewer are used.
 - **FR-020**: The repository MUST contain one written API convention covering paths, request
   and response shapes, errors, authentication and how changes are kept in step between backend
   and frontend.
+- **FR-021**: Each feature with an API MUST have a machine-checkable contract file, beside its
+  written contract, listing every endpoint's path, method, success status and required request
+  and response fields.
+- **FR-022**: One reusable check MUST compare the app with every started feature's contract
+  file, the tables and columns in its data model, the assistant tools named in feature 006, and
+  its task list; every problem MUST be reported with the feature, file and item, and any
+  problem MUST give a failing result.
+- **FR-023**: Features with no ticked task MUST be skipped; tasks marked `(manual)` MUST NOT be
+  counted; endpoints present in the app but in no contract MUST fail the check, except the
+  framework's own documentation pages.
+- **FR-024**: When the AI assistant finishes a turn, the check MUST run for the current feature:
+  mid-feature it MUST show failures without stopping work; once the feature's last non-manual
+  task is ticked, it MUST refuse to let the assistant finish until every check passes. No check
+  MUST run after every individual edit.
+- **FR-025**: CI MUST run the same check on every pull request and push to `main`; a failure MUST
+  mark the pull request failing.
+- **FR-026**: The comparison of code with spec, plan and tasks MUST use Spec Kit's own steps
+  (converge, analyze) before a feature's pull request, kept separate from the pass/fail check.
+- **FR-027**: Documentation MUST explain how to define a contract, run the check locally and read
+  its failures.
 
 ## Success Criteria *(mandatory)*
 
@@ -229,6 +296,13 @@ backend feature and a code review; the matching guide and reviewer are used.
   failing test or formatting error is marked as failing.
 - **SC-008**: Each of the six rule topics (in the lead's rule files or ours), both folder guides,
   the three reusable guides and both reviewers exists and is referenced from the root guide.
+- **SC-009**: 100% of planted contract violations (missing endpoint, wrong method, missing field,
+  undocumented endpoint, missing column, extra assistant tool, unticked task at completion) are
+  reported by name with a failing result, by the script, the assistant hook and CI.
+- **SC-010**: The check for all features finishes in under 30 seconds (no server started, no full
+  test suite run).
+- **SC-011**: With only feature 001 started, the check passes (no false failures from planned
+  features).
 
 ## Assumptions
 

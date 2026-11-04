@@ -17,3 +17,7 @@ Published as `docs/api-conventions.md`. Every feature's API contract follows the
 - **Keeping in step:** a change to an endpoint updates, in the same pull request, the feature's
   contract in `specs/NNN-*/contracts/`, the backend tests and the frontend code that calls it.
   FastAPI's OpenAPI schema at `/openapi.json` is the generated reference.
+- **Machine-checkable contract (issue #16):** every route declares its `response_model`, and
+  each feature's `contracts/api.yaml` lists its endpoints (path, method, success status,
+  required request and response fields); `scripts/validate_contracts.py` checks the app against
+  it. A change to an endpoint updates the Markdown contract and `api.yaml` together.

@@ -7,7 +7,7 @@ Base path `/api/workflow`. All endpoints need `current_user` and 002's `require_
 ## Run object
 
 ```json
-{ "step": "gate", "tax_year": "2025-26",
+{ "step": "gate", "tax_year": "2025-26", "fingerprint": "…",
   "document": { "message": "…", "missing": [] },
   "validation": { "message": "…", "issues": [] },
   "research": { "note": "…", "passages": [{ "source": "Income Tax Ordinance 2001", "location": "§149(1)", "page": 12, "text": "…" }] },
@@ -28,8 +28,9 @@ Step texts carry `"fallback": true` when the code-written result was used.
 | `GET /api/workflow/result` | 004's tax result (same body as `GET /api/tax/{tax_year}`) plus `passages` | `200` | `409` "Approval needed." when not approved for the current inputs |
 | `POST /api/workflow/done` | Mark done | `200` run (`step: "done"`) | `409` not at the result step |
 
-`approve` sends the `outputs_fingerprint` the user saw (`{"fingerprint": "…"}`); a mismatch means
-the inputs changed and returns `409`.
+The run's `fingerprint` is its `outputs_fingerprint` (added 2026-11-04: `approve` needs it).
+`approve` sends the `fingerprint` the user saw (`{"fingerprint": "…"}`); a mismatch means the
+inputs changed and returns `409`.
 
 ## Agent tools (read-only, `app/workflow/tools.py`)
 

@@ -1,0 +1,112 @@
+# Machine-checkable subset of documents-api.md (feature 003), checked by
+# scripts/validate_contracts.py against the app's OpenAPI schema. The Markdown
+# stays the full contract; change both together (docs/contracts.md).
+openapi: 3.1.0
+info:
+  title: Feature 003 contract
+  version: 1.0.0
+paths:
+  /api/documents:
+    post:
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              - doc_type
+      responses:
+        '201':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: &id001
+                - id
+                - doc_type
+                - tax_year
+                - status
+                - failure_reason
+                - page_count
+                - created_at
+                - confirmed_at
+                - fields
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+  /api/documents/{id}:
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: *id001
+    delete:
+      responses:
+        '204':
+          description: success
+  /api/documents/{id}/file:
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /api/documents/{id}/fields/{name}:
+    patch:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - name
+                - value
+                - confidence
+                - source_page
+                - source_label
+                - rule_reason
+                - user_edited
+                - confirmed
+  /api/documents/{id}/confirm:
+    post:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: *id001
+  /api/documents/{id}/retry:
+    post:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: *id001

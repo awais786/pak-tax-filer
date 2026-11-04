@@ -1,0 +1,29 @@
+# Machine-checkable subset of tax-api.md (feature 004), checked by
+# scripts/validate_contracts.py against the app's OpenAPI schema. The Markdown
+# stays the full contract; change both together (docs/contracts.md).
+openapi: 3.1.0
+info:
+  title: Feature 004 contract
+  version: 1.0.0
+paths:
+  /api/tax/{tax_year}:
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - tax_year
+                - blocked_reason
+                - salary_tax
+                - surcharge
+                - profit_tax
+                - salary_balance
+                - profit_balance
+                - non_atl_extra_withheld
+                - steps
+                - summary
+                - label

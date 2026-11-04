@@ -144,3 +144,58 @@ Each decision: what was chosen, why, and what else was considered.
   generated OpenAPI schema is the machine-readable source the frontend can check against.
 - **Rationale:** one human-readable standard, per-feature contracts reviewed with the spec, and
   an automatically generated schema that can't drift from the code.
+
+## R11. Machine-checkable contracts and the check (added for issue #16)
+
+- **Decision:** each feature with an API has `contracts/api.yaml`, an OpenAPI 3.1 subset of its
+  Markdown contract (paths, methods, success status, required request and response fields).
+  `scripts/validate_contracts.py` (Python, standard library + `pyyaml`) builds the app in-process
+  (`app.openapi()`, SQLAlchemy `Base.metadata`; no server) and checks, for every **started**
+  feature (at least one ticked task):
+  - each `api.yaml` operation exists with its success status, required request fields and
+    required response fields (response fields need a declared `response_model`);
+  - no app operation is missing from every `api.yaml` (except `/openapi.json`, `/docs`,
+    `/redoc`);
+  - each table and column in the feature's `data-model.md` tables headed `| Column | Type |`
+    exists in the metadata;
+  - for 006, the MCP server lists exactly the tools named by the snake_case `## <tool>`
+    headings of `contracts/mcp-tools.md` (other headings, such as `## .mcp.json`, are ignored);
+  - once a feature's last non-manual task is ticked, none is left unchecked.
+  Usage: `--feature NNN` or `--all`. Exit `0` pass, `1` violations (each printed as
+  `[NNN] file: item: problem`), `2` setup error (app can't be imported, YAML invalid). Run as
+  `uv run --project backend python scripts/validate_contracts.py`.
+- **Rationale:** checks what the specs promise using the schema FastAPI already generates and
+  the Markdown tables we already write; no new framework (issue #16). Reading `data-model.md`
+  avoids a second file for tables.
+- **Alternatives:** contract tests only; an OpenAPI snapshot with a drift tool such as `oasdiff`
+  (design addendum, rejected); Schemathesis (a new tool; property-based testing goes beyond
+  checking the contract exists); declaring every error status in code (busywork; error codes are
+  covered by each feature's API tests).
+
+## R12. The completion hook (added for issue #16)
+
+- **Decision:** `.claude/hooks/contracts-gate.sh` (bash + `jq`, like the others) on the `Stop`
+  event, registered in `.claude/settings.json` beside the lead's hooks. It reads the feature
+  number from the branch name (`NNN-…`, Spec Kit's convention; other branches: exit 0), runs the
+  check for that feature, then:
+  - pass → exit 0, no output;
+  - fail and the feature still has unticked non-manual tasks → `{"systemMessage": "<failures>"}`,
+    exit 0 (shown in the session, work continues);
+  - fail and every non-manual task is ticked → `{"decision": "block", "reason": "<failures>"}`
+    so Claude keeps working on the fix.
+  It never runs per edit. If the check itself can't run (exit 2), it shows the error without
+  blocking, so a broken environment never traps a session.
+- **Rationale:** FR-024; `Stop` fires when Claude tries to finish, which is the moment of a
+  completion claim; blocking only then keeps mid-feature work usable.
+- **Alternatives:** a `PostToolUse` check (runs on every edit, which issue #16 rules out);
+  blocking at every `Stop` (unusable mid-feature).
+
+## R13. Started features, manual tasks, CI and Spec Kit (added for issue #16)
+
+- **Decision:** a task line containing `(manual)` is ignored by the check; human-only tasks
+  (sign-offs, browser checks, a second operating system, requests to the lead, deliberately
+  failing PRs) are marked when each feature starts. The `contracts` CI job runs `--all` on every
+  pull request and push to `main`; making it a required status check is a repository setting the
+  lead is asked to enable. `CLAUDE.md` tells the assistant to run `/speckit-converge` and
+  `/speckit-analyze` before a feature's pull request (semantic review, not pass/fail).
+- **Rationale:** FR-023, FR-025, FR-026; reuses Spec Kit instead of re-implementing it.

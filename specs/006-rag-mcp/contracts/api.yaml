@@ -1,0 +1,71 @@
+# Machine-checkable subset of ask-and-tokens-api.md (feature 006), checked by
+# scripts/validate_contracts.py against the app's OpenAPI schema. The Markdown
+# stays the full contract; change both together (docs/contracts.md).
+openapi: 3.1.0
+info:
+  title: Feature 006 contract
+  version: 1.0.0
+paths:
+  /api/ask:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - question
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - status
+                - answer
+                - citations
+                - uncovered_part
+                - tax_page_line
+                - label
+  /api/tokens:
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+      responses:
+        '201':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - name
+                - prefix
+                - created_at
+                - expires_at
+                - revoked_at
+                - last_used_at
+                - token
+  /api/tokens/{id}:
+    delete:
+      responses:
+        '204':
+          description: success

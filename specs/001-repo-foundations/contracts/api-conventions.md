@@ -4,7 +4,8 @@ Published as `docs/api-conventions.md`. Every feature's API contract follows the
 
 - **Paths:** all endpoints under `/api/`, grouped by area (`/api/auth/...`,
   `/api/documents/...`); plural nouns for collections; no verbs except for actions such as
-  `/api/auth/login`.
+  `/api/auth/login`. The one exception is the infrastructure probe `GET /health`
+  ([health.md](health.md)), which sits at the root as health checks conventionally do.
 - **Bodies:** JSON only (`Content-Type: application/json`); field names in `snake_case`;
   money as strings holding decimals (e.g. `"125000.00"`), never floats (Principle I); dates as
   ISO 8601.

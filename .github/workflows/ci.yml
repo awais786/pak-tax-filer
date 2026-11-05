@@ -1,0 +1,89 @@
+# CI for every pull request and push to main (feature 001, research R8). Uses the same tools as
+# the Claude Code hooks, so local and CI results agree: Ruff and Prettier format; pylint and
+# oxlint lint; mypy and tsc type-check. Each part is its own job, so a failure says where.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pak_tax_filer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pak_tax_filer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # CI-only database in the service container above; not a secret.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pak_tax_filer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.13.6"
+      - run: uv sync --frozen
+      - name: Format (Ruff)
+        run: uv run ruff format --check .
+      - name: Lint (pylint)
+        run: uv run pylint --recursive=y app alembic tests
+      - name: Types (mypy)
+        run: uv run mypy app alembic tests
+      - name: Migrations apply, roll back and re-apply
+        run: uv run alembic upgrade head && uv run alembic downgrade base && uv run alembic upgrade head
+      - name: Tests (pytest)
+        run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Format (Prettier)
+        run: npx prettier --check .
+      - name: Lint (oxlint)
+        run: npm run lint
+      - name: Types (tsc, following the project references)
+        run: npx tsc -b
+      - name: Tests (Vitest)
+        run: npm test
+
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.13.6"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: jq is available
+        run: jq --version
+      - name: Hook tests (every hook, ours and the lead's)
+        run: uv run --no-project --with pytest pytest .claude/hooks/tests

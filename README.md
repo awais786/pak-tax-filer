@@ -74,7 +74,7 @@ AI-specific pieces, Python MCP SDK, Docker Compose.
    server (3 tools).
 7. Agentic workflow wiring (document/validation/research agents, state
    machine, human-approval gate before calculation).
-8. Telemetry, guardrail tests, CI (lint/type-check/tests + an eval-accuracy
+8. Telemetry, guardrail tests, CI (lint/type-check/te"sts + an eval-accuracy
    gate), PDF export with the validation-status banner.
 
 ## Planning process
@@ -91,13 +91,21 @@ pre-written here.
 
 ## Development setup
 
-Prerequisites: Docker + Docker Compose, Python 3.12+, Node 20+.
+Prerequisites: Docker + Docker Compose, [`uv`](https://docs.astral.sh/uv/) (it provides
+Python 3.13), Node 26+, and bash with `jq` (Git Bash on Windows; `winget install jqlang.jq`).
 
 ```bash
 git clone git@github.com:awais786/pak-tax-filer.git
 cd pak-tax-filer
 docker compose up -d        # starts db (Postgres + pgvector), backend, frontend
-docker compose exec backend python manage.py migrate
+docker compose exec backend alembic upgrade head
+```
+
+If you use Claude Code, also install the tools its hooks run on your machine:
+
+```bash
+(cd backend && uv sync)     # pylint, Ruff, mypy, pytest for the lint/format hooks
+(cd frontend && npm ci)     # oxlint, Prettier for the frontend hooks
 ```
 
 - Backend: `http://localhost:8000` · Frontend: `http://localhost:5173`
@@ -105,6 +113,7 @@ docker compose exec backend python manage.py migrate
   anything that touches extraction, RAG, or the MCP server.
 - Backend tests: `docker compose exec backend pytest`
 - Frontend tests: `docker compose exec frontend npm test`
+- Claude Code hook tests: `uv run --no-project --with pytest pytest .claude/hooks/tests`
 
 ## Full background
 

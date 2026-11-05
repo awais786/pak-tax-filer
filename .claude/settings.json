@@ -1,4 +1,37 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(pytest:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(docker compose exec backend pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(uvx ruff:*)",
+      "Bash(pylint:*)",
+      "Bash(uv run pylint:*)",
+      "Bash(npm test:*)",
+      "Bash(npx vitest:*)",
+      "Bash(docker compose exec frontend npm test:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(rm:*)",
+      "Bash(git rm:*)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -17,6 +50,17 @@
             "statusMessage": "Running frontend lint..."
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/format-on-write.sh",
+            "timeout": 180,
+            "statusMessage": "Formatting..."
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -28,6 +72,17 @@
             "command": "bash .claude/hooks/git-safety.sh",
             "timeout": 10,
             "statusMessage": "Checking git safety..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/tax-rates-guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking the tax-rates guard..."
           }
         ]
       }

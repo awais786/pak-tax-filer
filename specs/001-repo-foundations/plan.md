@@ -18,11 +18,11 @@ subagents and a written API convention. Decisions and alternatives are in
 
 ## Technical Context
 
-**Language/Version**: Python 3.13 (backend, hooks), TypeScript on Node 24 LTS (frontend)
+**Language/Version**: Python 3.13 (backend, hooks), TypeScript on Node 26 LTS (frontend)
 
 **Primary Dependencies**: FastAPI, Uvicorn, SQLAlchemy 2.0 (async) + asyncpg, Alembic; React,
-Vite; dev: pytest, HTTPX, Ruff (formatting only), pylint (linting, as in the lead's hook), mypy,
-Vitest, React Testing Library, Prettier, ESLint (from the Vite template); CI: GitHub Actions
+Vite; dev: pytest, httpx2 (test client), Ruff (formatting only), pylint (linting, as in the lead's hook), mypy,
+Vitest, React Testing Library, Prettier, oxlint (from the Vite template); CI: GitHub Actions
 
 **Storage**: PostgreSQL 17 with pgvector (extension only; no tables in 001)
 
@@ -55,7 +55,7 @@ renamed; 3 skills, 2 subagents)
 | V. Synthetic data only | PASS | No data of any kind |
 | VI. Test-first, measured AI | PASS | Smoke tests for health and the placeholder page; CI runs every test on every PR |
 | VII. MVP scope | PASS | README milestone 1 plus the lead's issues #4/#5; FR-014 excludes everything else |
-| Stack | PASS | Exactly the constitution's stack. Libraries and tools inside it (uv, SQLAlchemy, Alembic, Vite, Ruff, pylint, ESLint, mypy, Prettier, pytest, Vitest, jq) and GitHub Actions (where the repo already lives) are not new stack components |
+| Stack | PASS | Exactly the constitution's stack. Libraries and tools inside it (uv, SQLAlchemy, Alembic, Vite, Ruff, pylint, oxlint, mypy, Prettier, pytest, Vitest, jq) and GitHub Actions (where the repo already lives) are not new stack components |
 | Merge gates | PASS | CI created here, as constitution v1.2.1 requires; the eval gate is deferred to 003/006 |
 | Secrets | PASS | Claude denied reading `.env`; no secrets needed |
 
@@ -117,7 +117,7 @@ backend/
 frontend/
 ├── CLAUDE.md               # frontend guide
 ├── Dockerfile
-├── package.json            # npm test → vitest run; npm run lint → eslint
+├── package.json            # npm test → vitest run; npm run lint → oxlint (Vite template's linter)
 ├── vite.config.ts
 └── src/
     ├── App.tsx             # placeholder page

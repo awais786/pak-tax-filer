@@ -52,6 +52,7 @@ demo scale; a cleanup job can be added when the app has real traffic.
 | `updated_at` | timestamptz | required, defaults to now; set on every save |
 
 No other columns: no name, CNIC, NTN or residency (FR-018, Principle V). Created by
-`0002_auth_tables` with the other tables.
+`0003_taxpayer_profiles` (amended 2026-11-05: planned inside `0002_auth_tables`, but 0002 had
+already been applied, and applied migrations are never edited).
 
 **Lifecycle:** no profile → saved → replaced by each later save; deleted only with the user.

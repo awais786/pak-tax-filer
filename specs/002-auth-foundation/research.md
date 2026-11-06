@@ -38,6 +38,12 @@ Each decision: what was chosen, why, and what else was considered.
   counted the same way.
 - **Rationale:** survives restarts and works across several backend processes; simple to test.
   Treating unknown emails the same avoids revealing which emails exist.
+- **Concurrency (added 2026-11-05, code review):** each login takes a per-email PostgreSQL
+  advisory lock (`pg_advisory_xact_lock`) for its transaction, so simultaneous attempts are
+  counted one at a time and can't all slip under the limit.
+- **Accepted MVP limits (code review):** throttling is per email, not per IP (FR-007 asks for
+  per email), so one client can try a password across many emails; `login_failures` rows are
+  never deleted (harmless at demo scale; a cleanup can come with real traffic).
 - **Alternatives:** in-memory counter (lost on restart, per-process); Redis (a new stack
   component for one counter).
 

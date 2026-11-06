@@ -124,8 +124,8 @@ frontend/
 **Structure Decision**: auth code lives in its own `backend/app/auth/` package so later
 increments (sign-up, reset) and other features import `current_user` from one place; the profile
 lives beside it in `backend/app/profile/` so 003–007 import `get_profile`/`require_profile` from
-one place. The profile table is created by the same `0002_auth_tables` migration (nothing is
-built yet, so no separate migration is needed).
+one place. The profile table has its own migration, `0003_taxpayer_profiles` (amended
+2026-11-05: 0002 had already been applied when the profile was built).
 
 ## Complexity Tracking
 

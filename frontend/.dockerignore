@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# Local env files must never reach the image (constitution, Secrets).
+.env
+.env.*

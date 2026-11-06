@@ -13,3 +13,6 @@
   place.
 - Tax and wealth-reconciliation arithmetic is deterministic code, never an
   LLM call — an LLM may only explain an already-computed result.
+- Never log secrets, passwords, session tokens or personal data, and never put them in error
+  messages or test output.
+- Claude must not read `.env` files; the shared permissions deny it.

@@ -4,18 +4,21 @@ Each decision: what was chosen, why, and what else was considered.
 
 ## R1. Runtime versions
 
-- **Decision:** Python 3.13, Node 24 (LTS), PostgreSQL 17 with pgvector.
+- **Decision:** Python 3.13, Node 26 (LTS), PostgreSQL 17 with pgvector. *(Amended
+  2026-11-05: planned as Node 24, but Node 26 became the current LTS in October 2026; it is
+  also what the host installs, so container and host match.)*
 - **Rationale:** the README sets minimums (Python 3.12+, Node 20+). Node 20 reached end of
   life in April 2026, so the current LTS is used. Python 3.13 is current and widely supported
   by libraries. PostgreSQL 17 is current and has an official pgvector image.
 - **Alternatives:** Python 3.12 (security fixes only now); Python 3.14 (newest, library
-  support still catching up); Node 22 (older LTS).
+  support still catching up); Node 24 (previous LTS, supported until 2028; the original choice).
 
 ## R2. Backend tooling
 
-- **Decision:** `uv` for dependencies and running; Uvicorn as the server; pytest + HTTPX
-  `TestClient` for tests; Ruff for formatting; pylint for linting (amended 2026-11-04: the
-  lead's #10 hook lints with pylint, so Ruff no longer lints).
+- **Decision:** `uv` for dependencies and running; Uvicorn as the server; pytest + FastAPI's
+  `TestClient` (on `httpx2`) for tests; Ruff for formatting; pylint for linting (amended
+  2026-11-04: the lead's #10 hook lints with pylint, so Ruff no longer lints; amended
+  2026-11-05: Starlette now deprecates `httpx` for the test client in favour of `httpx2`).
 - **Rationale:** `uv` is fast, handles Python versions, and is already used on the dev machine.
   These are FastAPI's documented defaults. Ruff formats in one fast tool (replacing Black and
   isort); pylint is the repo's existing linter, so we don't add a competing one.
@@ -37,7 +40,10 @@ Each decision: what was chosen, why, and what else was considered.
 ## R4. Frontend tooling
 
 - **Decision:** Vite (React + TypeScript template), Vitest + React Testing Library, Prettier
-  for formatting, and the template's own ESLint setup (`npm run lint`) for linting.
+  for formatting, and the template's own linter (`npm run lint`) for linting: **oxlint**
+  (amended 2026-11-05: Vite's React + TypeScript template now ships oxlint instead of ESLint;
+  the plan's intent was "keep the template's linter", and the lead's hook runs `npm run lint`
+  whichever linter is behind it).
 - **Rationale:** Vite's dev server defaults to port 5173, matching the README; Vitest shares
   Vite's config, so `npm test` needs no extra setup. The lead's `check-frontend.sh` hook runs
   the frontend's `lint` script, which the Vite template provides (amended 2026-11-04).
@@ -95,12 +101,12 @@ Each decision: what was chosen, why, and what else was considered.
 - **Decision:** one GitHub Actions workflow, `.github/workflows/ci.yml`, on every pull request
   and push to `main`, with three jobs: **backend** (uv; `ruff format --check`, `pylint app`,
   `mypy app`, `pytest` against a PostgreSQL + pgvector service container), **frontend**
-  (`npm ci`, `prettier --check`, `npm run lint`, `tsc --noEmit`, `npm test`) and **hooks**
+  (`npm ci`, `prettier --check`, `npm run lint`, `tsc -b`, `npm test`) and **hooks**
   (`pytest .claude/hooks/tests`, which runs every hook, ours and the lead's, against sample JSON
   inputs; no lint or type checks for bash, per the 2026-11-04 clarification). The eval gate is
   added when the first eval exists (003, 006).
 - **Rationale:** the constitution's merge gate needs lint, type checks and tests; CI uses the
-  same tools as the hooks (pylint and ESLint lint; Ruff and Prettier format), so local and CI
+  same tools as the hooks (pylint and oxlint lint; Ruff and Prettier format), so local and CI
   results agree (spec FR-015). Separate jobs run in parallel and show exactly which part
   failed. Running Postgres as a service container matches the real database.
 - **Alternatives:** `ruff check` as the linter (the original decision; would compete with the

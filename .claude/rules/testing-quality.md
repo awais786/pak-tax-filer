@@ -10,3 +10,6 @@
   its findings as real feedback to fix, not noise to ignore.
 - Don't mark a task complete with a known-failing test or lint error left
   unexplained.
+- Write the failing test first and watch it fail for the right reason before writing the code
+  (constitution, Principle VI).
+- Backend tests that need a database use the separate test database, never development data.

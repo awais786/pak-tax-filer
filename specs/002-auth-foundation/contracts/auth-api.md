@@ -17,14 +17,15 @@ Request (`Content-Type: application/json` required):
 | Success | `200` | `{"email": "demo@example.com"}` | sets `session` |
 | Unknown email or wrong password | `401` | `{"detail": "Invalid email or password."}` | none |
 | 10+ failures for this email in 15 min | `429` | `{"detail": "Too many attempts. Try again later."}` | none |
-| Missing or invalid fields | `422` | FastAPI validation error | none |
+| Missing or invalid fields (email 3–254 characters, password 1–1,024) | `422` | FastAPI validation error, without the rejected values | none |
+| Not `Content-Type: application/json` | `415` | `{"detail": "Content-Type must be application/json."}` | none |
 
 The email is trimmed and lower-cased before use. A failed attempt (401) is recorded for
 throttling; a throttled attempt (429) does not check the password.
 
 ## POST /api/auth/logout
 
-No body required (`Content-Type: application/json`). Always `204`. Deletes the current session if
+No body required (`Content-Type: application/json`; otherwise `415` and the session is kept). Otherwise always `204`. Deletes the current session if
 there is one and clears the `session` cookie.
 
 ## GET /api/auth/me
@@ -54,7 +55,8 @@ Request: `{"tax_year": "2025-26", "on_atl": false}` (`Content-Type: application/
 |---|---|---|
 | Created or replaced | `200` | the `profile` object as in `GET` |
 | `tax_year` not supported | `422` | `{"detail": "Tax year 2024-25 is not supported."}` |
-| `on_atl` missing or not a boolean; unknown fields (e.g. `cnic`) | `422` | FastAPI validation error |
+| `on_atl` missing or not a boolean; unknown fields (e.g. `cnic`) | `422` | FastAPI validation error, without the rejected values |
+| Not `Content-Type: application/json` | `415` | `{"detail": "Content-Type must be application/json."}` |
 
 ### Helpers for other features (`app/profile/`)
 

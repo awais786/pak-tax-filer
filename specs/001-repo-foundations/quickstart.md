@@ -1,6 +1,6 @@
 # Quickstart: validating Repo Foundations (001)
 
-**Prerequisites:** Docker + Docker Compose, `uv`, Node 24+, bash and `jq` (Git Bash on
+**Prerequisites:** Docker + Docker Compose, `uv`, Node 26+ (research R1), bash and `jq` (Git Bash on
 Windows; `winget install jqlang.jq`). Python is provided by `uv`.
 
 ## 1. Start the app (User Story 1, SC-001)

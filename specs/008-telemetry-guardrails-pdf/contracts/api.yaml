@@ -1,0 +1,22 @@
+# Machine-checkable subset of pdf-and-telemetry.md (feature 008), checked by
+# scripts/validate_contracts.py against the app's OpenAPI schema. The Markdown
+# stays the full contract; change both together (docs/contracts.md).
+openapi: 3.1.0
+info:
+  title: Feature 008 contract
+  version: 1.0.0
+paths:
+  /api/tax/{tax_year}/pdf:
+    get: &id001
+      responses:
+        '200':
+          description: success
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /api/wealth/{tax_year}/pdf:
+    get: *id001
+  /api/workflow/result/pdf:
+    get: *id001

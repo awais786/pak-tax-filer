@@ -23,6 +23,8 @@ from app.rag.answer import ModelAnswer
 from app.rag.checks import checked_citations
 from app.rag.embed import EmbeddingError
 from app.rag.search import RetrievedPassage, search
+from app.settings import get_settings
+from app.telemetry.ai import AiCall, ai_call, record_refusal
 from app.workflow.client import AgentClient, AgentError
 from app.workflow.settings import STEP_SECONDS
 from app.workflow.tools import AGENT_TOOLS, UPLOAD_PAGE, Toolbox
@@ -85,19 +87,30 @@ async def _ask(  # pylint: disable=too-many-arguments,too-many-positional-argume
     prompt: str,
     tools: Toolbox,
     reply: type[Reply],
+    call: AiCall,
 ) -> Reply | None:
-    """The agent's answer within the step's time, or None if it failed or was too slow."""
+    """The agent's answer within the step's time, or None if it failed or was too slow (and
+    `call` says which)."""
     try:
         return await asyncio.wait_for(
             client.run(agent, instructions, prompt, tools, AGENT_TOOLS[agent], reply), STEP_SECONDS
         )
-    except (AgentError, EmbeddingError, TimeoutError):
+    except TimeoutError:
+        call.outcome = "timeout"
+        return None
+    except (AgentError, EmbeddingError):
+        call.outcome = "fallback"
         return None
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # Any other failure (a bad tool argument, the SDK, the database) also gives the plain
         # result rather than a half-finished run (backend review M2). The type only is logged.
         logger.warning("Workflow agent %s failed: %s", agent, type(exc).__name__)
+        call.outcome = "fallback"
         return None
+
+
+def _model() -> str:
+    return get_settings().workflow_model
 
 
 # ---- Document step (FR-003) ----
@@ -113,12 +126,23 @@ async def document_step(client: AgentClient, tools: Toolbox, *, use_ai: bool) ->
     source = json.dumps(
         {"labels": [c["label"] for c in listed["certificates"]], "missing": missing}
     )
-    if use_ai:
-        answer = await _ask(
-            client, "document", DOCUMENT_INSTRUCTIONS, f"Missing: {missing}", tools, _Message
-        )
-        if answer and answer.message.strip() and uses_only_numbers_from(answer.message, source):
-            return {"message": answer.message.strip(), "missing": missing, "fallback": False}
+    if not use_ai:
+        record_refusal("workflow_document", _model())
+    else:
+        with ai_call("workflow_document", _model()) as call:
+            answer = await _ask(
+                client,
+                "document",
+                DOCUMENT_INSTRUCTIONS,
+                f"Missing: {missing}",
+                tools,
+                _Message,
+                call,
+            )
+            if answer and answer.message.strip() and uses_only_numbers_from(answer.message, source):
+                return {"message": answer.message.strip(), "missing": missing, "fallback": False}
+            if answer is not None:
+                call.outcome = "check_failed"
     return {"message": _plain_document(listed, missing), "missing": missing, "fallback": True}
 
 
@@ -161,11 +185,18 @@ async def validation_step(
             for issue in check["issues"]
         ]
     source = json.dumps({"certificates": certificates, "issues": issues})
-    if use_ai and certificates:
+    if certificates and not use_ai:
+        record_refusal("workflow_validation", _model())
+    elif certificates:
         prompt = f"Certificates: {json.dumps(certificates)}"
-        answer = await _ask(client, "validation", VALIDATION_INSTRUCTIONS, prompt, tools, _Message)
-        if answer and answer.message.strip() and uses_only_numbers_from(answer.message, source):
-            return {"message": answer.message.strip(), "issues": issues, "fallback": False}
+        with ai_call("workflow_validation", _model()) as call:
+            answer = await _ask(
+                client, "validation", VALIDATION_INSTRUCTIONS, prompt, tools, _Message, call
+            )
+            if answer and answer.message.strip() and uses_only_numbers_from(answer.message, source):
+                return {"message": answer.message.strip(), "issues": issues, "fallback": False}
+            if answer is not None:
+                call.outcome = "check_failed"
     return {"message": _plain_validation(issues), "issues": issues, "fallback": True}
 
 
@@ -219,12 +250,23 @@ async def research_step(
 ) -> dict[str, Any]:
     """The tax-law passages that apply, each with its citation, from 006's corpus only."""
     income = sorted({d.doc_type.value for d in documents}) or ["salary_certificate"]
-    if use_ai:
+    if not use_ai:
+        record_refusal("workflow_research", _model())
+    else:
         prompt = f"The user's income comes from: {', '.join(income)}."
-        answer = await _ask(client, "research", RESEARCH_INSTRUCTIONS, prompt, tools, _Note)
-        cited = _checked_note(answer, tools.found)
-        if answer and cited:
-            return {"note": answer.note.strip(), "passages": _passages(cited), "fallback": False}
+        with ai_call("workflow_research", _model()) as call:
+            answer = await _ask(
+                client, "research", RESEARCH_INSTRUCTIONS, prompt, tools, _Note, call
+            )
+            cited = _checked_note(answer, tools.found)
+            if answer and cited:
+                return {
+                    "note": answer.note.strip(),
+                    "passages": _passages(cited),
+                    "fallback": False,
+                }
+            if answer is not None:
+                call.outcome = "check_failed"
     return await _plain_research(tools, [DocType(i) for i in income])
 
 

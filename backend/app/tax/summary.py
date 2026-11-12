@@ -19,7 +19,9 @@ from google.genai import errors, types
 
 from app.documents.extraction.client import THINKING_LEVELS
 from app.explain.number_check import numbers_in, uses_only_numbers_from
+from app.settings import get_settings
 from app.tax.engine import TaxResult, rupees
+from app.telemetry.ai import ai_call, record_gemini_usage
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +157,7 @@ class GeminiSummariser:  # pylint: disable=too-few-public-methods
         except (errors.APIError, httpx2.HTTPError) as exc:
             logger.warning("Summary failed: %s", type(exc).__name__)
             return None
+        record_gemini_usage(response.usage_metadata)
         candidates = response.candidates or []
         if not candidates or candidates[0].finish_reason != types.FinishReason.STOP:
             # Cut short (e.g. MAX_TOKENS) or blocked: a fragment like "For tax year 2025" passes
@@ -189,13 +192,20 @@ async def verified_summary(
     """The summary if it arrives in time and passes the number check; otherwise None."""
     if result.blocked_reason is not None or not result.steps:
         return None
-    try:
-        text = await asyncio.wait_for(summariser.write(breakdown_text(result)), limit_seconds)
-    except TimeoutError:
-        return None
-    except Exception:  # pylint: disable=broad-exception-caught  # optional; must never break the result
-        logger.warning("Summary failed")
-        return None
-    if text is None or not summary_is_safe(text, result):
-        return None
-    return text.strip()
+    with ai_call("tax_summary", get_settings().summary_model) as call:
+        try:
+            text = await asyncio.wait_for(summariser.write(breakdown_text(result)), limit_seconds)
+        except TimeoutError:
+            call.outcome = "timeout"
+            return None
+        except Exception:  # pylint: disable=broad-exception-caught  # optional; must never break the result
+            logger.warning("Summary failed")
+            call.outcome = "fallback"
+            return None
+        if text is None:
+            call.outcome = "fallback"
+            return None
+        if not summary_is_safe(text, result):
+            call.outcome = "check_failed"
+            return None
+        return text.strip()

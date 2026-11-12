@@ -16,10 +16,8 @@ Content and banner per [data-model.md](../data-model.md). Generated per request;
 
 ## Telemetry
 
-- Setting `OTEL_EXPORTER`: `console` (default) or `otlp`; `OTEL_EXPORTER_OTLP_ENDPOINT` default
-  `http://jaeger:4317`.
-- `docker compose --profile telemetry up -d` starts Jaeger; its UI is at `http://localhost:16686`
-  (pending the lead's approval).
+- Setting `OTEL_EXPORTER`: `console` (default, spans in the backend logs) or `none` (amended
+  2026-11-12: no viewer in 008; telemetry is for developers only, with no page in the app).
 - Span attributes per [data-model.md](../data-model.md).
 
 ## Guardrails CI job
@@ -30,5 +28,9 @@ merge (constitution, merge gates).
 
 ## Frontend
 
-`DownloadPdfButton` on the Tax page, the Wealth page and the workflow's result step: downloads
-the PDF; disabled with the reason when the endpoint would return `409`.
+`DownloadPdfButton` on the Tax page, the Wealth page and the workflow's result step: fetches the
+PDF through the API helper (`apiDownload`) and saves it under the server's file name; disabled with
+the reason when the endpoint would return `409` (on the Wealth page also while there are unsaved
+changes, since the PDF is of the saved statement); an error that arrives anyway (e.g. `409` after
+a change in another tab, `401`) is shown on the page, never as a broken download (review
+2026-11-12).

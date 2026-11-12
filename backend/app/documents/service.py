@@ -30,6 +30,8 @@ from app.documents.models import (
 )
 from app.documents.storage import Storage
 from app.documents.uploads import CheckedFile
+from app.settings import get_settings
+from app.telemetry.ai import ai_call, record_refusal, record_usage
 
 # Reasons starting with this come from reading the printed value, not from a rule.
 UNREADABLE = "Couldn't read"
@@ -77,9 +79,11 @@ async def use_extraction(db: AsyncSession, user_id: uuid.UUID) -> ExtractionAtte
     recent = select(func.count()).select_from(ExtractionAttempt)
     recent = recent.where(ExtractionAttempt.attempted_at > since)
     if (await db.execute(recent)).scalar_one() >= APP_DAILY_EXTRACTIONS:
+        record_refusal("extraction", get_settings().extraction_model)
         raise DailyLimitReached(APP_LIMIT_REACHED)
     mine = recent.where(ExtractionAttempt.user_id == user_id)
     if (await db.execute(mine)).scalar_one() >= DAILY_EXTRACTIONS:
+        record_refusal("extraction", get_settings().extraction_model)
         raise DailyLimitReached(USER_LIMIT_REACHED)
     attempt = ExtractionAttempt(user_id=user_id, attempted_at=datetime.now(UTC))
     db.add(attempt)
@@ -143,7 +147,15 @@ async def extract_document(
     document.status = DocStatus.EXTRACTING
     await db.flush()
 
-    result = await extractor.extract(document.doc_type, content, document.media_type)
+    with ai_call("extraction", get_settings().extraction_model) as call:
+        result = await extractor.extract(document.doc_type, content, document.media_type)
+        record_usage(result.input_tokens, result.output_tokens)
+        if result.limit_reached:
+            call.outcome = "limit_reached"  # the free tier's limit (Google's 429)
+        elif result.wrong_type:
+            call.outcome = "check_failed"
+        elif result.failure_reason is not None:
+            call.outcome = "fallback"
 
     document.model = result.model
     if result.failure_reason is not None:

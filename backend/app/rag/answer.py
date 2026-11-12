@@ -19,6 +19,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.documents.extraction.client import THINKING_LEVELS
 from app.rag.search import RetrievedPassage
+from app.telemetry.ai import record_gemini_usage
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,7 @@ class GeminiAnswerer:  # pylint: disable=too-few-public-methods
             )
         except (errors.APIError, httpx2.HTTPError) as exc:
             raise AnswerError(type(exc).__name__) from exc
+        record_gemini_usage(response.usage_metadata)
         candidates = response.candidates or []
         if not candidates or candidates[0].finish_reason != types.FinishReason.STOP:
             # Cut short or blocked: a partial JSON answer must never be used.

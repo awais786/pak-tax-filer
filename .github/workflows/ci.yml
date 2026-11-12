@@ -39,6 +39,8 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.13.6"
+      - name: PDF libraries (WeasyPrint, feature 008; the same packages as backend/Dockerfile)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core
       - run: uv sync --frozen
       - name: Format (Ruff)
         run: uv run ruff format --check .
@@ -50,6 +52,44 @@ jobs:
         run: uv run alembic upgrade head && uv run alembic downgrade base && uv run alembic upgrade head
       - name: Tests (pytest)
         run: uv run pytest
+
+  # The constitution's guardrails across the whole app (feature 008, User Story 2): import rules,
+  # then the suite in backend/tests/guardrails (its README says what each file proves). Its own
+  # job, so a broken guardrail is named as such.
+  guardrails:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pak_tax_filer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pak_tax_filer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # CI-only database in the service container above; not a secret.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pak_tax_filer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+      - name: PDF libraries (WeasyPrint; every PDF page's banner is a guardrail)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core
+      - run: uv sync --frozen
+      - name: Import rules (lint-imports)
+        run: uv run lint-imports
+      - name: Guardrail suite
+        run: uv run pytest tests/guardrails
 
   frontend:
     runs-on: ubuntu-latest

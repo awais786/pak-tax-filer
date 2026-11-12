@@ -77,3 +77,7 @@ export function groupedAmount(value: unknown): string | null {
   }
   return `${text.startsWith("-") ? "−" : ""}${rupees(text)}`;
 }
+
+/** The tax result as a PDF (feature 008): a download address, not a fetch. */
+export const taxPdfUrl = (taxYear: string) =>
+  `/api/tax/${encodeURIComponent(taxYear)}/pdf`;

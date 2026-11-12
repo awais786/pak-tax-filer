@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Your wealth statement for {{ wealth.tax_year }}{% endblock %}
+{% block content %}
+<h1>Your wealth statement for {{ wealth.tax_year }}</h1>
+
+<h2>Result</h2>
+<p class="headline">{{ wealth.result.message }}</p>
+<table>
+  <tr><td>Net assets this year</td><td class="amount">{{ rupees(wealth.result.net_assets) }}</td></tr>
+  <tr><td>Increase in net assets</td><td class="amount">{{ rupees(wealth.result.increase) }}</td></tr>
+  <tr><td>Inflows</td><td class="amount">{{ rupees(wealth.result.inflows) }}</td></tr>
+  <tr><td>Outflows</td><td class="amount">{{ rupees(wealth.result.outflows) }}</td></tr>
+  <tr><td>Unreconciled</td><td class="amount">{{ rupees(wealth.result.unreconciled) }}</td></tr>
+</table>
+{% if wealth.result.where_to_look %}
+<h2>Where to look</h2>
+<ul>{% for item in wealth.result.where_to_look %}<li>{{ item }}</li>{% endfor %}</ul>
+{% endif %}
+
+<h2>Assets</h2>
+<table>
+{% for row in wealth.statement.assets %}
+  <tr><td>{{ row.description }}</td><td class="muted">{{ row.category | replace("_", " ") }}</td><td class="amount">{{ rupees(row.amount) }}</td></tr>
+{% else %}
+  <tr><td colspan="3" class="muted">None</td></tr>
+{% endfor %}
+</table>
+
+<h2>Liabilities</h2>
+<table>
+{% for row in wealth.statement.liabilities %}
+  <tr><td>{{ row.description }}</td><td class="muted">{{ row.creditor or "" }}</td><td class="amount">{{ rupees(row.amount) }}</td></tr>
+{% else %}
+  <tr><td colspan="3" class="muted">None</td></tr>
+{% endfor %}
+</table>
+
+<h2>From your confirmed certificates</h2>
+<table>
+{% for line in wealth.auto_filled %}
+  <tr><td>{{ line.label }}{% if line.provisional %} <span class="muted">(provisional)</span>{% endif %}</td><td class="amount">{{ rupees(line.amount) }}</td></tr>
+{% endfor %}
+</table>
+
+<h2>How it was worked out</h2>
+<ol class="steps">
+{% for step in wealth.result.steps %}
+  <li>{{ step.description }}<span class="source">Form line: {{ step.form_line }}</span></li>
+{% endfor %}
+</ol>
+{% endblock %}

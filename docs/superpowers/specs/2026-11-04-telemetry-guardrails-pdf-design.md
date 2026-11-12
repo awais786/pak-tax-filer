@@ -97,3 +97,36 @@ noted in the PR. *(Builder's call; follows 002's precedent.)*
 
 Exporter settings, span and attribute names, import-linter configuration, template layout,
 Docker packages for WeasyPrint, and the export endpoints.
+
+## Addendum 2026-11-12: after the stack change, 006 and 007
+
+The parts and decisions above stand, with these changes (decided by Saifullah unless marked):
+
+- **Telemetry goes to the logs only; no viewer in 008** (Saifullah, option A of three: logs only;
+  logs plus an opt-in local Jaeger; a hosted service). Telemetry is for developers, never users,
+  so the "Activity" page 006's navigation reserved is dropped. Spans are printed to the backend
+  logs with OpenTelemetry's console exporter; no new stack component, no approval needed, nothing
+  on the server. A viewer (e.g. Jaeger) can be added later with an exporter setting and no code
+  changes; the PR says so in one line. Checked while deciding: Jaeger idles at about 13 MB
+  (154 MB image), so it was the new component, not its weight, that ruled it out.
+- **Gemini, not Claude.** AI-call spans use OpenTelemetry's current GenAI names
+  (`gen_ai.provider.name="gcp.gemini"` for the AI Studio endpoint; `gen_ai.operation.name`
+  `generate_content`, `embeddings` or `execute_tool`; `gen_ai.request.model`,
+  `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`), not the older
+  `gen_ai.system="anthropic"`. These conventions are still "Development" and recently moved to
+  their own repository, so the names live in one place in our code. *(Claude's call.)*
+- **Eight AI uses, five call sites:** extraction, the tax and wealth summaries, Ask's answers,
+  embeddings (search, corpus build, MCP search), and 007's document, validation and research
+  agents. One wrapper around the five places that call Gemini covers all of them. Outcomes add
+  "question limit reached" (006, 007) to passed, check failed, timed out and fallback.
+- **Import rules** keep `google.genai`, `app.rag`, `app.documents.extraction` and the workflow's
+  agents out of the tax engine, the rates and the reconciliation.
+- **Guardrail suite** also gathers what 006 and 007 now prove: answers always cited and number-
+  checked (including scales such as "10m"), the agents' read-only tools, and the approval gate
+  (including the race 007's review fixed).
+- **PDF library stays WeasyPrint**, measured on our backend image: +70 MB disk and 71 MB peak
+  memory for a two-page render, against fpdf2's 58 MB and 59 MB, whose built-in fonts also can't
+  draw characters such as "–". Fine for the 1 GB server.
+- **PDF buttons:** the Tax page and Guided filing's result share 007's `TaxResultView`, so one
+  Download PDF button there covers both, plus the wealth page. The guided-filing PDF keeps 007's
+  cited passages but not its research note (AI-written text stays out of PDFs, as above).

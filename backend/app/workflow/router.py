@@ -143,7 +143,7 @@ async def read_result(ctx: Ctx) -> dict[str, Any]:
     found = await service.result(ctx)
     if found is None:
         raise HTTPException(status.HTTP_409_CONFLICT, APPROVAL_NEEDED)
-    run, tax = found
+    run, tax, _ = found
     research = (run.step_outputs or {}).get("research") or {}
     return {**tax_out(tax).model_dump(), "passages": research.get("passages", [])}
 

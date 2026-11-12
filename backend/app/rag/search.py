@@ -12,9 +12,10 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.rag.embed import Embedder
+from app.rag.embed import EMBEDDING_MODEL, Embedder
 from app.rag.models import CorpusDocument, DocumentKind, Passage
 from app.rag.settings import RELEVANCE_CUTOFF, TOP_K
+from app.telemetry.ai import ai_call
 
 
 @dataclass(frozen=True)
@@ -47,7 +48,8 @@ async def search(
     cutoff: float = RELEVANCE_CUTOFF,
 ) -> SearchResult:
     """The top passages for a question, nearest first."""
-    vector = await embedder.embed_query(question)
+    with ai_call("embeddings", EMBEDDING_MODEL, "embeddings"):
+        vector = await embedder.embed_query(question)
     distance = Passage.embedding.cosine_distance(vector)
     rows = (
         await db.execute(

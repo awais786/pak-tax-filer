@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}PakTaxFiler{% endblock %}</title>
+<style>
+  /* The banner is a running element: WeasyPrint repeats it at the top of every page (R6). */
+  @page {
+    size: A4;
+    margin: 50mm 16mm 18mm;
+    @top-center { content: element(banner); vertical-align: top; padding-top: 8mm; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #55635c; }
+  }
+  body { font-family: "DejaVu Sans", sans-serif; font-size: 9.5pt; color: #13201b; line-height: 1.4; }
+  /* A fixed width (A4 210mm less the 16mm side margins): a margin box otherwise shrinks to its
+     text, so the banner would differ in width between PDFs. */
+  .banner { position: running(banner); border: 1.5pt solid #9a5806; background: #fdf3e4;
+            padding: 3mm 4mm; font-size: 8.5pt; width: 178mm; box-sizing: border-box; }
+  .banner .label { font-weight: bold; font-size: 9.5pt; }
+  .banner p { margin: 0.6mm 0; }
+  h1 { font-size: 16pt; margin: 0 0 3mm; color: #0f5c3f; }
+  h2 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #0f5c3f; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 1.2mm 1.5mm; border-bottom: 0.5pt solid #d6ddd9; text-align: left; vertical-align: top; }
+  td.amount, th.amount { text-align: right; white-space: nowrap; }
+  .headline { font-size: 13pt; font-weight: bold; }
+  .muted { color: #55635c; font-size: 8.5pt; }
+  ol.steps li { margin-bottom: 2mm; break-inside: avoid; }
+  tr { break-inside: avoid; }
+  ol.steps .source { display: block; color: #55635c; font-size: 8pt; }
+</style>
+</head>
+<body>
+<div class="banner">
+  {% for line in banner %}<p{% if loop.first %} class="label"{% endif %}>{{ line }}</p>{% endfor %}
+</div>
+{% block content %}{% endblock %}
+</body>
+</html>

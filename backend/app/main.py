@@ -9,8 +9,10 @@ from app.auth.router import router as auth_router
 from app.documents.router import router as documents_router
 from app.profile.router import router as profile_router
 from app.rag.router import router as ask_router
+from app.reports.router import router as reports_router
 from app.workflow.router import router as workflow_router
 from app.tax.router import router as tax_router
+from app.telemetry.setup import configure as configure_telemetry
 from app.wealth.router import router as wealth_router
 
 app = FastAPI(title="pak-tax-filer")
@@ -21,6 +23,9 @@ app.include_router(tax_router)
 app.include_router(wealth_router)
 app.include_router(ask_router)
 app.include_router(workflow_router)
+app.include_router(reports_router)
+# Request and database spans to the logs, for developers (feature 008, US3).
+configure_telemetry(app)
 
 
 @app.exception_handler(RequestValidationError)

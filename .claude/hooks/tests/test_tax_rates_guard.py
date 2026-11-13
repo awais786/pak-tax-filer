@@ -93,3 +93,34 @@ def test_other_shell_commands_are_left_alone() -> None:
     result = run_hook(bash_event("uv run pytest backend/tests"))
     assert result.returncode == 0
     assert result.stdout == ""
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # Review notes #39, item 3: reaching the folder in steps, so the full path never appears.
+        "cd backend/app/tax && sed -i 's/0.05/0.06/' rates/ty2026.py",
+        "cd backend/app/tax/rates && sed -i 's/0.05/0.06/' ty2026.py",
+        "cd backend/app && cd tax && cd rates && echo x > model.py",
+        r"cd backend\app\tax && copy x rates\ty2026.py",
+    ],
+)
+def test_reaching_the_rates_folder_in_steps_still_asks(command: str) -> None:
+    """Fails if a command reaches the rates folder without naming its full path."""
+    assert_asks_with_fbr_reason(run_hook(bash_event(command)))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "uv run pytest backend/tests/tax/test_rates.py",
+        "grep -rn rates_for backend/app",
+        "cat backend/app/tax/ratesheet.py",
+    ],
+)
+def test_names_that_only_contain_rates_are_left_alone(command: str) -> None:
+    """Fails if the guard asks for a test file, a function or a file name that merely contains
+    "rates" (only the rates folder itself is guarded)."""
+    result = run_hook(bash_event(command))
+    assert result.returncode == 0
+    assert result.stdout == ""

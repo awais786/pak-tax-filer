@@ -20,4 +20,10 @@ Check in particular:
 - No secrets, tokens or personal data in code, logs or tests.
 - Each new behaviour has a test that would fail without it.
 
-Report findings ranked by severity, each with file:line, the problem and a suggested fix.
+Check the diff against the feature's `specs/NNN-*/spec.md` first: a requirement or acceptance
+scenario the change misses or contradicts is a finding. Skip style and formatting:
+Ruff, pylint and mypy already check them.
+
+Report only findings that would change behaviour, break a rule or principle above, or leave a
+behaviour untested, ranked by severity, each with file:line, the problem and a suggested fix. If
+nothing matters, say so: a review with no findings is a valid result (review notes #39, item 4).

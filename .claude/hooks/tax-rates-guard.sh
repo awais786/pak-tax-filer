@@ -13,10 +13,16 @@ command=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 file_path=${file_path//\\//}
 command=${command//\\//}
 
+# A command is guarded when "rates" appears in it as a whole path segment, not only as the full
+# backend/app/tax/rates path: `cd backend/app/tax && sed -i ... rates/ty2026.py` reaches the folder
+# in steps (review notes #39, item 3). Names that merely contain it (test_rates.py, rates_for,
+# ratesheet.py) don't count. A false alarm only asks; it never blocks.
+segment='(^|[^A-Za-z0-9_.-])rates(/|$|[^A-Za-z0-9_.-])'
+
 guarded=false
 if [[ -n "$file_path" && ( "$file_path" == */backend/app/tax/rates/* || "$file_path" == backend/app/tax/rates/* ) ]]; then
   guarded=true
-elif [[ -n "$command" && "$command" == *backend/app/tax/rates* ]]; then
+elif [[ -n "$command" && "$command" =~ $segment ]]; then
   guarded=true
 fi
 

@@ -8,7 +8,10 @@ description: "Review a pak-tax-filer change before it is committed or merged: ar
 1. **Scope.** Read the diff (`git diff`, or the PR) and the task it implements in
    `specs/NNN-*/tasks.md`, with its spec and contract.
 2. **Delegate by area.** Use the `backend-reviewer` subagent for `backend/` changes and the
-   `frontend-reviewer` subagent for `frontend/` changes; review anything else yourself.
+   `frontend-reviewer` subagent for `frontend/` changes; review anything else yourself. Ask
+   them to check the diff against the feature's `spec.md` and to skip style (the formatters,
+   linters and type checkers cover it); a reviewer told to find problems always finds
+   something, so ask for what matters, and accept "no findings" (review notes #39, item 4).
 3. **Checklist** (lead's issue #4, rule 5); for each, note pass or the specific problem:
    - **Architecture:** matches the plan and folder guides; logic outside routers/components.
    - **Security:** no secrets, tokens or personal data in code, logs, tests or commits; auth on

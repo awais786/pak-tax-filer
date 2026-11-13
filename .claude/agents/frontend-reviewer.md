@@ -18,4 +18,10 @@ Check in particular:
 - Strict TypeScript without unexplained `any`; no secrets or personal data in code or tests.
 - Accessible markup (headings, labels, roles).
 
-Report findings ranked by severity, each with file:line, the problem and a suggested fix.
+Check the diff against the feature's `specs/NNN-*/spec.md` first: a requirement or acceptance
+scenario the change misses or contradicts is a finding. Skip style and formatting:
+Prettier, oxlint and tsc already check them.
+
+Report only findings that would change behaviour, break a rule or principle above, or leave a
+behaviour untested, ranked by severity, each with file:line, the problem and a suggested fix. If
+nothing matters, say so: a review with no findings is a valid result (review notes #39, item 4).

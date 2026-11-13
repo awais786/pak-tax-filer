@@ -22,7 +22,9 @@ All six are tested by `pytest .claude/hooks/tests` with sample JSON inputs (CI h
 
 - **Matches tools:** `Edit`, `Write`, `MultiEdit`, `Bash`.
 - **Triggers when:** the tool's `file_path` is inside `backend/app/tax/rates/`, or a `Bash`
-  `command` contains `backend/app/tax/rates` (either slash direction).
+  `command` contains `rates` as a whole path segment (either slash direction), so reaching the
+  folder in steps (`cd backend/app/tax && sed ... rates/ty2026.py`) still asks; names that only
+  contain it (`test_rates.py`, `rates_for`) don't (amended 2026-11-12, review notes #39 item 3).
 - **When triggered, outputs:**
 
   ```json

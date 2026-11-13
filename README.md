@@ -76,7 +76,7 @@ AI-specific pieces, Python MCP SDK, Docker Compose.
    server (3 tools).
 7. Agentic workflow wiring (document/validation/research agents, state
    machine, human-approval gate before calculation).
-8. Telemetry, guardrail tests, CI (lint/type-check/te"sts + an eval-accuracy
+8. Telemetry, guardrail tests, CI (lint/type-check/tests + an eval-accuracy
    gate), PDF export with the validation-status banner.
 
 ## Planning process
@@ -118,8 +118,8 @@ If you use Claude Code, also install the tools its hooks run on your machine:
 ```
 
 - Backend: `http://localhost:8000` · Frontend: `http://localhost:5173`
-- Set `ANTHROPIC_API_KEY` in a local `.env` (not committed) before running
-  anything that touches extraction, RAG, or the MCP server.
+- Set `GEMINI_API_KEY` (Google Gemini, free tier from AI Studio) in a local `.env` (not
+  committed) before running anything that touches extraction, RAG, or the MCP server.
 - Backend tests: `docker compose exec backend pytest`
 - Frontend tests: `docker compose exec frontend npm test`
 - Claude Code hook tests: `uv run --no-project --with pytest pytest .claude/hooks/tests`

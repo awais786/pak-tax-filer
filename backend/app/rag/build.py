@@ -25,9 +25,10 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_sessionmaker
-from app.rag.embed import Embedder, EmbeddingError, GeminiEmbedder
+from app.rag.embed import EMBEDDING_MODEL, Embedder, EmbeddingError, GeminiEmbedder
 from app.rag.models import CorpusDocument, DocumentKind, Passage
 from app.rag.split import Part, RawPassage, split_guidance, split_law
+from app.telemetry.ai import ai_call
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,8 @@ async def build_corpus(  # pylint: disable=too-many-arguments,too-many-positiona
     prepared = [await _passages_of(source, cache_dir, download, read_pages) for source in sources]
     texts = [p.text for _, passages in prepared for p in passages]
     try:
-        vectors = await embedder.embed_documents(texts)
+        with ai_call("embeddings", EMBEDDING_MODEL, "embeddings"):
+            vectors = await embedder.embed_documents(texts)
     except EmbeddingError as exc:
         raise BuildError(f"Embedding failed: {exc}") from exc
     await _replace_corpus(db, prepared, iter(vectors))

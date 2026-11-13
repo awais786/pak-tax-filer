@@ -26,6 +26,27 @@ paths:
                 type: object
                 required:
                 - email
+  /api/auth/signup:
+    # Added 2026-11-09 (auth-api.md).
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - email
   /api/auth/logout:
     post:
       responses:

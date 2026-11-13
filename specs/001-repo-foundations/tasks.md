@@ -84,7 +84,7 @@ two hooks are tested before they are written (constitution, Principle VI).
 
 - [X] T018 [US2] Create `.claude/hooks/tax-rates-guard.sh` (bash + `jq`, in the same style as the lead's `git-safety.sh`) implementing the `PreToolUse` contract in [contracts/claude-hooks.md](contracts/claude-hooks.md); T017 passes
 - [X] T019 [US2] In the lead's existing `.claude/settings.json` (#10), add a `hooks.PreToolUse` entry with matcher `Edit|Write|MultiEdit|Bash` and command `bash .claude/hooks/tax-rates-guard.sh`, keeping his `git-safety.sh` entry unchanged
-- [ ] T020 [US2] Run [quickstart.md](quickstart.md) section 2 in Claude Code and confirm the prompt appears, reject leaves the file unchanged, and approve applies it
+- [ ] T020 [US2] (manual) Run [quickstart.md](quickstart.md) section 2 in Claude Code and confirm the prompt appears, reject leaves the file unchanged, and approve applies it
 
 **Checkpoint**: User Story 2 works on its own.
 
@@ -106,7 +106,7 @@ two hooks are tested before they are written (constitution, Principle VI).
 - [X] T023 [US3] In the lead's `.claude/settings.json`, add a `hooks.PostToolUse` entry with matcher `Edit|Write|MultiEdit` and command `bash .claude/hooks/format-on-write.sh`, keeping his `check-python.sh` and `check-frontend.sh` entries unchanged
 - [X] T024 [US3] Add a `permissions` section to the lead's `.claude/settings.json` exactly as in the table in [contracts/claude-hooks.md](contracts/claude-hooks.md): allow tests, linters, formatters, read-only git and `docker compose ps`/`logs`; ask for `git push`, `rm`, `git rm`; deny reading `.env` and `.env.*`
 - [X] T025 [P] [US3] Extend the lead's root `CLAUDE.md` (#10), keeping all of his content and `@` imports, with (about one page in total): the constitution's seven principles in one line each with a link to `.specify/memory/constitution.md`; the repo layout; commands to start the app, run migrations, run backend, frontend and hook tests (hook tests need bash and `jq`), lint and format; a note that `backend/app/tax/rates/` is guarded
-- [ ] T026 [US3] Run [quickstart.md](quickstart.md) section 3 in Claude Code and confirm each expected result
+- [ ] T026 [US3] (manual) Run [quickstart.md](quickstart.md) section 3 in Claude Code and confirm each expected result
 
 **Checkpoint**: all three user stories work independently.
 
@@ -120,7 +120,7 @@ review subagents and an API convention.
 **Independent Test**: [quickstart.md](quickstart.md), section 5.
 
 - [X] T027 [US4] Create `.github/workflows/ci.yml` per research R8: on pull requests and pushes to `main`; job `backend` (uv, `ruff format --check`, `pylint app`, `mypy app`, `pytest` with a `pgvector/pgvector:pg17` service and `DATABASE_URL` set); job `frontend` (Node 26, `npm ci`, `prettier --check .`, `npm run lint`, `tsc -b` (the root tsconfig only references sub-configs, so `tsc --noEmit` would check nothing), `npm test`); job `hooks` (`uv run --no-project --with pytest pytest .claude/hooks/tests`, with `jq` available; no lint or type checks for bash)
-- [ ] T028 [US4] Push a branch with a deliberately failing backend test and one with a misformatted `.tsx` file; confirm each CI job fails and the PR shows it; delete both branches
+- [ ] T028 [US4] (manual) Push a branch with a deliberately failing backend test and one with a misformatted `.tsx` file; confirm each CI job fails and the PR shows it; delete both branches
 - [X] T029 [P] [US4] Write `docs/api-conventions.md` exactly as [contracts/api-conventions.md](contracts/api-conventions.md)
 - [X] T030 [P] [US4] Write `backend/CLAUDE.md` (layout of `backend/app/`, how to add an endpoint, migration commands, test database notes; no repetition of the root guide)
 - [X] T031 [P] [US4] Write `frontend/CLAUDE.md` (layout of `frontend/src/`, how to add a page, calling the API through one helper, test commands; no repetition of the root guide)
@@ -131,8 +131,8 @@ review subagents and an API convention.
 - [X] T036 [P] [US4] Create skill `.claude/skills/code-review/SKILL.md`: checklist covering architecture, security, business logic, test coverage and regressions (issue #4, rule 5); uses the reviewer subagents for backend and frontend parts
 - [X] T037 [P] [US4] Create subagents `.claude/agents/backend-reviewer.md` and `.claude/agents/frontend-reviewer.md`, read-only tools only, each reviewing against its rules, the API convention and the constitution
 - [X] T042 [P] [US4] Write `.claude/hooks/tests/test_lead_hooks.py` (per the 2026-11-04 clarification): the lead's `git-safety.sh` asks on a force-push and stays silent on `git status`; `check-python.sh` ignores non-`.py` files and finds pylint once the backend's host virtual environment exists (after T043); `check-frontend.sh` ignores files that aren't `.js`/`.jsx`/`.ts`/`.tsx`/`.vue`. Tests only; his scripts stay unchanged unless he accepts T043
-- [ ] T043 [US4] The lead's lint hooks run on the host, but 001 installs dependencies inside the containers: in the PR #3 description, propose to the lead a small change to his `.claude/hooks/check-python.sh` so it also looks for pylint in `backend/.venv/bin` and `backend/.venv/Scripts` (Windows); apply it only if he agrees, otherwise document `uv tool install pylint` as the fallback in `backend/CLAUDE.md` (T030)
-- [ ] T038 [US4] Add a "Conventions" section to the root `CLAUDE.md` (after the lead's content) linking the folder guides, rules, skills and subagents and saying when to use each; run [quickstart.md](quickstart.md) section 5
+- [ ] T043 [US4] (manual) The lead's lint hooks run on the host, but 001 installs dependencies inside the containers: in the PR #3 description, propose to the lead a small change to his `.claude/hooks/check-python.sh` so it also looks for pylint in `backend/.venv/bin` and `backend/.venv/Scripts` (Windows); apply it only if he agrees, otherwise document `uv tool install pylint` as the fallback in `backend/CLAUDE.md` (T030)
+- [x] T038 [US4] Add a "Conventions" section to the root `CLAUDE.md` (after the lead's content) linking the folder guides, rules, skills and subagents and saying when to use each; run [quickstart.md](quickstart.md) section 5
 
 **Checkpoint**: all four user stories work.
 
@@ -142,7 +142,7 @@ review subagents and an API convention.
 
 - [X] T039 Update the "Development setup" section of `README.md`: prerequisites Docker + Docker Compose, `uv`, Node 26+, bash and `jq`; for contributors using Claude Code, the host steps `uv sync` in `backend/` and `npm ci` in `frontend/` so the lead's lint hooks can run pylint and `npm run lint` on the host; replace `python manage.py migrate` with `alembic upgrade head`; add the hook test command; leave the rest of the README unchanged
 - [X] T040 [P] Run `ruff format --check`, `pylint app` and `mypy app` in `backend/`; `prettier --check`, `npm run lint` and `tsc -b` in `frontend/`; and the hook tests; fix anything reported
-- [ ] T041 Run the whole of [quickstart.md](quickstart.md) from a fresh clone, plus two extra checks: start the app with port 8000 already in use and confirm the error names the port; and run section 4 on a second operating system if one is available. Record the results in the PR description, stating plainly which operating systems were not checked so the lead can verify them
+- [ ] T041 (manual) Run the whole of [quickstart.md](quickstart.md) from a fresh clone, plus two extra checks: start the app with port 8000 already in use and confirm the error names the port; and run section 4 on a second operating system if one is available. Record the results in the PR description, stating plainly which operating systems were not checked so the lead can verify them
 
 ---
 
@@ -210,17 +210,17 @@ hook and CI (FR-033 to FR-039).
 
 ### Tests for User Story 7 (write first, confirm they fail)
 
-- [ ] T071 [P] [US7] Write `scripts/tests/test_validate_contracts.py` (pytest, a small sample FastAPI app and sample `specs/` folders) per research R12: a missing path, method, success status, required request field or required response field → exit 1 with `[NNN] file: item: problem`; an app endpoint in no `api.yaml` → exit 1, but `/openapi.json`, `/docs`, `/redoc` are allowed; a feature with no ticked task is skipped; a started feature with an API but no `api.yaml` → exit 1; a table or column in `data-model.md` missing from the metadata → exit 1; an MCP tool list not equal to the `mcp-tools.md` headings → exit 1; all non-manual tasks ticked except one → exit 1; `(manual)` tasks ignored; invalid YAML or an app that can't be imported → exit 2; everything matching → exit 0
-- [ ] T072 [P] [US7] Write `.claude/hooks/tests/test_contracts_gate.py` per [contracts/claude-hooks.md](contracts/claude-hooks.md) (contract gate) with a stubbed check: non-feature branch → no output; pass → no output; violations mid-feature → `systemMessage`, exit 0; violations with every non-manual task ticked → `decision: block` with the messages; check exit 2 → `systemMessage`, never block
+- [x] T071 [P] [US7] Write `scripts/tests/test_validate_contracts.py` (pytest, a small sample FastAPI app and sample `specs/` folders) per research R12: a missing path, method, success status, required request field or required response field → exit 1 with `[NNN] file: item: problem`; an app endpoint in no `api.yaml` → exit 1, but `/openapi.json`, `/docs`, `/redoc` are allowed; a feature with no ticked task is skipped; a started feature with an API but no `api.yaml` → exit 1; a table or column in `data-model.md` missing from the metadata → exit 1; an MCP tool list not equal to the `mcp-tools.md` headings → exit 1; all non-manual tasks ticked except one → exit 1; `(manual)` tasks ignored; invalid YAML or an app that can't be imported → exit 2; everything matching → exit 0
+- [x] T072 [P] [US7] Write `.claude/hooks/tests/test_contracts_gate.py` per [contracts/claude-hooks.md](contracts/claude-hooks.md) (contract gate) with a stubbed check: non-feature branch → no output; pass → no output; violations mid-feature → `systemMessage`, exit 0; violations with every non-manual task ticked → `decision: block` with the messages; check exit 2 → `systemMessage`, never block
 
 ### Implementation for User Story 7
 
-- [ ] T073 [US7] Create `scripts/validate_contracts.py` per research R12 (`--feature NNN` / `--all`; exit codes 0/1/2; started-feature and `(manual)` rules); add `pyyaml` to `backend/pyproject.toml` dev dependencies; T071 passes
-- [ ] T074 [US7] Create `.claude/hooks/contracts-gate.sh` per research R13 and register it under `Stop` in `.claude/settings.json` beside the lead's entries (his are not changed); T072 passes
-- [ ] T075 [US7] Add job `contracts` to `.github/workflows/ci.yml` (every pull request and push to `main`): `uv run --project backend python scripts/validate_contracts.py --all`
-- [ ] T076 [P] [US7] Add the "Machine-checkable contract" rule to `docs/api-conventions.md` per [contracts/api-conventions.md](contracts/api-conventions.md) (every route declares `response_model`; `api.yaml` changes with the Markdown contract); make `GET /health` in `backend/app/main.py` declare its `response_model`
-- [ ] T077 [P] [US7] Write `docs/contracts.md` (defining a contract and `api.yaml`; running the check locally; reading `[NNN] file: item: problem` messages; the started-feature and `(manual)` rules; the completion hook) and add a "Contracts" section to the root `CLAUDE.md`: run the check before claiming a feature done, and run `/speckit-converge` and `/speckit-analyze` before a feature's pull request
-- [ ] T078 [US7] Mark this feature's human-only tasks `(manual)` in this `tasks.md` (T020, T026, T028, T041, T043, T079, T080 and the quickstart runs), per research R14
+- [x] T073 [US7] Create `scripts/validate_contracts.py` per research R12 (`--feature NNN` / `--all`; exit codes 0/1/2; started-feature and `(manual)` rules); add `pyyaml` to `backend/pyproject.toml` dev dependencies; T071 passes
+- [x] T074 [US7] Create `.claude/hooks/contracts-gate.sh` per research R13 and register it under `Stop` in `.claude/settings.json` beside the lead's entries (his are not changed); T072 passes
+- [x] T075 [US7] Add job `contracts` to `.github/workflows/ci.yml` (every pull request and push to `main`): `uv run --project backend python scripts/validate_contracts.py --all`
+- [x] T076 [P] [US7] Add the "Machine-checkable contract" rule to `docs/api-conventions.md` per [contracts/api-conventions.md](contracts/api-conventions.md) (every route declares `response_model`; `api.yaml` changes with the Markdown contract); make `GET /health` in `backend/app/main.py` declare its `response_model`
+- [x] T077 [P] [US7] Write `docs/contracts.md` (defining a contract and `api.yaml`; running the check locally; reading `[NNN] file: item: problem` messages; the started-feature and `(manual)` rules; the completion hook) and add a "Contracts" section to the root `CLAUDE.md`: run the check before claiming a feature done, and run `/speckit-converge` and `/speckit-analyze` before a feature's pull request
+- [x] T078 [US7] Mark this feature's human-only tasks `(manual)` in this `tasks.md` (T020, T026, T028, T041, T043, T079, T080 and the quickstart runs), per research R14
 - [ ] T079 [US7] (manual) In this feature's pull request description, ask the lead to make the `contracts` CI job a required status check on `main` (repository setting)
 - [ ] T080 [US7] (manual) Run [quickstart.md](quickstart.md) section 8, including every planted violation
 

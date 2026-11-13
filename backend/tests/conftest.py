@@ -11,6 +11,12 @@ Tests that don't ask for these fixtures (e.g. /health, settings) need no databas
 
 import asyncio
 import os
+
+# Telemetry stays quiet in tests unless a test collects spans itself (feature 008): set before
+# the app and its settings are imported.
+os.environ.setdefault("OTEL_EXPORTER", "none")
+
+# pylint: disable=wrong-import-position
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
@@ -23,6 +29,7 @@ from httpx2 import ASGITransport, AsyncClient
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
+from telemetry_helpers import CollectingExporter, Spans
 
 from app.auth.models import User
 from app.auth.passwords import hash_password
@@ -35,6 +42,7 @@ from app.profile.service import save_profile
 from app.rag.answer import AnswerError, FakeAnswerer
 from app.rag.embed import FakeEmbedder
 from app.rag.router import get_answerer, get_embedder
+from app.telemetry.setup import add_exporter, instrument_engine
 from app.workflow.client import FakeAgentClient
 from app.workflow.router import get_agent_client, get_tool_sessions
 from app.tax.router import get_summariser
@@ -90,7 +98,8 @@ def test_database_url() -> Iterator[str]:
 @pytest.fixture
 async def db(test_database_url: str) -> AsyncIterator[AsyncSession]:
     """A session inside a transaction that is rolled back after the test."""
-    engine = create_async_engine(test_database_url, poolclass=NullPool)
+    # Database spans as app.db's engine records them, for the telemetry tests (feature 008).
+    engine = instrument_engine(create_async_engine(test_database_url, poolclass=NullPool))
     connection = await engine.connect()
     transaction = await connection.begin()
     # Code under test may commit; savepoints keep those commits inside the outer transaction.
@@ -202,3 +211,22 @@ async def user_with_profile(logged_in_user: User, db: AsyncSession) -> User:
     """The logged-in demo user, with a 2025-26 profile."""
     await save_profile(db, logged_in_user, PROFILE_YEAR, on_atl=True)
     return logged_in_user
+
+
+@pytest.fixture(scope="session")
+def memory_exporter() -> CollectingExporter:
+    """One in-memory span exporter for the whole run, added through the app's own add_exporter
+    so spans pass the same filter as the logs' (feature 008; a provider can't drop one)."""
+    exporter = CollectingExporter()
+    add_exporter(exporter, batch=False)
+    return exporter
+
+
+@pytest.fixture
+def spans(memory_exporter: CollectingExporter) -> Iterator[Spans]:
+    """The spans this test finishes (feature 008's telemetry tests)."""
+    memory_exporter.clear()
+    memory_exporter.collecting = True
+    yield Spans(memory_exporter)
+    memory_exporter.collecting = False
+    memory_exporter.clear()

@@ -272,6 +272,11 @@ test("approving sends the fingerprint the user saw and shows the result", async 
   );
   screen.getByText("Not yet reviewed by a tax practitioner. Not tax advice.");
   screen.getByText(/Salary tax: Rs 6,000/);
+  expect(
+    screen
+      .getByRole("button", { name: "Download PDF" })
+      .getAttribute("aria-disabled"),
+  ).toBe("false");
   const sources = screen.getByRole("list", { name: "Where this comes from" });
   expect(sources.textContent).toContain("§149(1), page 327");
 });

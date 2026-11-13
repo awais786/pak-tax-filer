@@ -30,9 +30,13 @@ def bash() -> str:
 
 
 def run_hook(
-    script: str, event: Mapping[str, object], timeout: int = 10
+    script: str,
+    event: Mapping[str, object],
+    timeout: int = 10,
+    env: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Feed one Claude Code event to .claude/hooks/<script> on standard input."""
+    """Feed one Claude Code event to .claude/hooks/<script> on standard input, with any extra
+    environment variables."""
     return subprocess.run(
         [bash(), str(HOOKS_DIR / script)],
         input=json.dumps(event),
@@ -40,4 +44,5 @@ def run_hook(
         text=True,
         check=False,
         timeout=timeout,
+        env={**os.environ, **(env or {})},
     )

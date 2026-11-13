@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from app.settings import get_settings
+from app.telemetry.setup import instrument_engine
 
 
 class Base(DeclarativeBase):
@@ -24,8 +25,9 @@ class Base(DeclarativeBase):
 
 @lru_cache(maxsize=1)
 def get_engine() -> AsyncEngine:
-    """The process's async engine, built from DATABASE_URL on first use."""
-    return create_async_engine(get_settings().database_url)
+    """The process's async engine, built from DATABASE_URL on first use; each statement's
+    duration is a telemetry span (feature 008), never its text."""
+    return instrument_engine(create_async_engine(get_settings().database_url))
 
 
 @lru_cache(maxsize=1)

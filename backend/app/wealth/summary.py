@@ -12,7 +12,9 @@ import logging
 import re
 
 from app.explain.number_check import numbers_in, uses_only_numbers_from
+from app.settings import get_settings
 from app.tax.summary import LIMIT_SECONDS, Summariser
+from app.telemetry.ai import ai_call
 from app.wealth.reconcile import ReconciliationResult
 
 logger = logging.getLogger(__name__)
@@ -92,17 +94,20 @@ async def verified_wealth_summary(
     if result.not_ready_reason is not None or not result.steps:
         return None
     source = wealth_breakdown_text(result, tax_year)
-    try:
-        text = await asyncio.wait_for(summariser.write(source), limit_seconds)
-    except TimeoutError:
-        return None
-    except Exception:  # pylint: disable=broad-exception-caught  # optional; never breaks the result
-        logger.warning("Wealth summary failed")
-        return None
-    if (
-        text is None
-        or not uses_only_numbers_from(text, source)
-        or not wealth_summary_is_safe(text, result)
-    ):
-        return None
-    return text.strip()
+    with ai_call("wealth_summary", get_settings().summary_model) as call:
+        try:
+            text = await asyncio.wait_for(summariser.write(source), limit_seconds)
+        except TimeoutError:
+            call.outcome = "timeout"
+            return None
+        except Exception:  # pylint: disable=broad-exception-caught  # optional; never breaks the result
+            logger.warning("Wealth summary failed")
+            call.outcome = "fallback"
+            return None
+        if text is None:
+            call.outcome = "fallback"
+            return None
+        if not uses_only_numbers_from(text, source) or not wealth_summary_is_safe(text, result):
+            call.outcome = "check_failed"
+            return None
+        return text.strip()

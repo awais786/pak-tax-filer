@@ -23,15 +23,15 @@ certificate, a bank certificate and a saved wealth statement.
    ```
 
    Expected: both pass. Then, in a throwaway branch, plant one break per principle and check each
-   fails, reverting after each: add `import anthropic` to `app/tax/engine.py` (`lint-imports`
-   fails, I); let `confirmed_documents` return `needs_review` documents too
+   fails, reverting after each: add `import google.genai` to `app/tax/engine.py` (`lint-imports`
+   fails, I); let `confirmed_documents` return `needs_review` documents too (both its status filter and
+   its every-field-confirmed check, which is a second layer: removing one alone is caught by the other)
    (`test_principle_3.py` fails, III); remove the banner from `base.html`
    (`test_principle_4.py` fails, IV).
 3. **Telemetry (US3):** with `OTEL_EXPORTER=console`, run upload, tax, ask and a workflow run.
    Expected: the backend logs show a span per request (route templates only) and per AI call with
    model, tokens and outcome. Search the logs for the demo email and a document id: no matches.
-   If Jaeger is approved: `docker compose --profile telemetry up -d`, set `OTEL_EXPORTER=otlp`,
-   and view traces at `http://localhost:16686`.
+   (No viewer in 008: telemetry is read in the logs, amended 2026-11-12.)
 4. **Tests:**
 
    ```bash

@@ -60,6 +60,7 @@ The constitution (`.specify/memory/constitution.md`) overrides everything else. 
 | Hook tests (need bash and `jq`) | `uv run --no-project --with pytest pytest .claude/hooks/tests` |
 | Lint | `uv run --project backend pylint --recursive=y backend/app backend/alembic backend/evals backend/tests`; `npm run lint` in `frontend/` |
 | Format | `uv run --project backend ruff format backend`; `npx prettier --write src` in `frontend/` |
+| Contract check | `uv run --project backend python scripts/validate_contracts.py --all` (or `--feature NNN`) |
 
 ## Conventions
 
@@ -72,6 +73,18 @@ The constitution (`.specify/memory/constitution.md`) overrides everything else. 
 | Skill `code-review` | Reviewing a diff or PR; it uses the subagents below |
 | Subagents `backend-reviewer`, `frontend-reviewer` | Read-only review of `backend/` / `frontend/` changes |
 | Spec Kit (`/speckit-*`) and `superpowers:brainstorming` | Planning a feature or non-trivial change (README "Planning process") |
+
+## Contracts
+
+- Run the contract check before calling a feature done; on a feature branch the `Stop` hook
+  (`.claude/hooks/contracts-gate.sh`) runs it for you and blocks a finish while it fails with
+  every task ticked. What it checks and how to read its messages: `docs/contracts.md`.
+- A change to an endpoint, table or MCP tool updates the feature's contract (`*-api.md` and
+  `api.yaml`, `data-model.md`, `mcp-tools.md`) in the same pull request. Never change a contract
+  just to make the check pass.
+- Before a feature's pull request, also run `/speckit-converge` and `/speckit-analyze`: the
+  judgement review of the code against `spec.md`, `plan.md` and `tasks.md`, which the pass/fail
+  check doesn't replace.
 
 ## Authentication and the taxpayer profile
 

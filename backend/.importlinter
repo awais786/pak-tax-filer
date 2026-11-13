@@ -1,0 +1,23 @@
+; Import rules for the guardrails (feature 008, research R4; constitution Principle I).
+; The tax engine, the rates and the wealth reconciliation are plain, deterministic code: they
+; may not reach the AI, directly or through any module that calls it. Run: uv run lint-imports
+
+[importlinter]
+root_package = app
+include_external_packages = True
+
+[importlinter:contract:no-ai-in-calculations]
+name = Tax and wealth calculations never import the AI
+type = forbidden
+source_modules =
+    app.tax.engine
+    app.tax.rates
+    app.wealth.reconcile
+; import-linter can only forbid an outside package whole, so "google" (Gemini's google.genai,
+; and anything else of Google's, which the calculations don't need either).
+forbidden_modules =
+    google
+    app.documents.extraction
+    app.rag
+    app.workflow.agents
+    app.workflow.client

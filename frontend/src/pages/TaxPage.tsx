@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "../api/client";
-import { getTax } from "../api/tax";
+import { getTax, taxPdfUrl } from "../api/tax";
 import type { TaxResult } from "../api/tax";
 import { TaxResultView } from "../components/TaxResultView";
 import { useProfile } from "../profile/ProfileContext";
@@ -59,7 +59,9 @@ export function TaxPage() {
           </div>
         </>
       )}
-      {result !== null && <TaxResultView result={result} />}
+      {result !== null && (
+        <TaxResultView result={result} pdfUrl={taxPdfUrl(result.tax_year)} />
+      )}
     </main>
   );
 }

@@ -82,7 +82,6 @@ paths:
                 - profit_balance
                 - non_atl_extra_withheld
                 - steps
-                - summary
                 - label
                 - passages
   /api/workflow/done:

@@ -164,8 +164,14 @@ def _entries(statement: WealthStatement | None) -> UserEntries:
     )
 
 
+def _plain(amount: Decimal) -> str:
+    """Plain digits ("1350000"): the driver reads whole-rupee columns back as e.g.
+    Decimal("1.35E+6"), which str() would send in scientific notation."""
+    return format(amount, "f")
+
+
 def _text(amount: Decimal | None) -> str | None:
-    return None if amount is None else str(amount)
+    return None if amount is None else _plain(amount)
 
 
 def _statement_out(statement: WealthStatement | None) -> StatementOut:
@@ -187,20 +193,22 @@ def _statement_out(statement: WealthStatement | None) -> StatementOut:
     return StatementOut(
         previous_net_assets=_text(statement.previous_net_assets),
         assets=[
-            AssetOut(category=a.category, description=a.description, amount=str(a.amount))
+            AssetOut(category=a.category, description=a.description, amount=_plain(a.amount))
             for a in statement.assets
         ],
         liabilities=[
-            LiabilityOut(description=row.description, creditor=row.creditor, amount=str(row.amount))
+            LiabilityOut(
+                description=row.description, creditor=row.creditor, amount=_plain(row.amount)
+            )
             for row in statement.liabilities
         ],
-        other_exempt_income=str(statement.other_exempt_income),
-        foreign_remittance=str(statement.foreign_remittance),
-        inheritance=str(statement.inheritance),
-        gifts_received=str(statement.gifts_received),
-        family_contribution=str(statement.family_contribution),
-        gifts_given=str(statement.gifts_given),
-        expenses={e.category.value: str(e.amount) for e in statement.expenses},
+        other_exempt_income=_plain(statement.other_exempt_income),
+        foreign_remittance=_plain(statement.foreign_remittance),
+        inheritance=_plain(statement.inheritance),
+        gifts_received=_plain(statement.gifts_received),
+        family_contribution=_plain(statement.family_contribution),
+        gifts_given=_plain(statement.gifts_given),
+        expenses={e.category.value: _plain(e.amount) for e in statement.expenses},
         saved_at=statement.saved_at,
     )
 
@@ -211,26 +219,29 @@ def _auto_filled(found: Certificates, rounded: dict[str, Decimal]) -> list[AutoF
     bank = [c.name for c in found.bank]
     return [
         AutoFilledLine(
-            line="7031", label="Taxable salary", amount=str(rounded["taxable"]), certificates=salary
+            line="7031",
+            label="Taxable salary",
+            amount=_plain(rounded["taxable"]),
+            certificates=salary,
         ),
         AutoFilledLine(
             line="7032",
             label="Exempt part of salary (gross - taxable)",
-            amount=str(rounded["gross"] - rounded["taxable"]),
+            amount=_plain(rounded["gross"] - rounded["taxable"]),
             certificates=salary,
             provisional=True,
         ),
         AutoFilledLine(
             line="7033",
             label="Bank profit",
-            amount=str(rounded["profit"]),
+            amount=_plain(rounded["profit"]),
             certificates=bank,
             provisional=True,
         ),
         AutoFilledLine(
             line=None,
             label="Tax deducted and withheld at source (outflow)",
-            amount=str(rounded["tax"]),
+            amount=_plain(rounded["tax"]),
             certificates=salary + bank,
             provisional=True,
         ),
@@ -249,7 +260,7 @@ def _result_out(result: ReconciliationResult) -> ResultOut:
         direction=result.direction,
         where_to_look=list(result.where_to_look),
         steps=[
-            StepOut(description=s.description, form_line=s.form_line, result=str(s.result))
+            StepOut(description=s.description, form_line=s.form_line, result=_plain(s.result))
             for s in result.steps
         ],
     )

@@ -20,7 +20,7 @@ from app.profile.models import TaxpayerProfile
 from app.rag.embed import Embedder
 from app.rag.router import get_embedder
 from app.settings import get_settings
-from app.tax.router import tax_out
+from app.tax.router import TaxOut, tax_out
 from app.workflow import service
 from app.workflow.client import AgentClient, GeminiAgentClient
 from app.workflow.models import Step, WorkflowRun
@@ -72,6 +72,28 @@ async def get_context(  # pylint: disable=too-many-arguments,too-many-positional
 Ctx = Annotated[service.Context, Depends(get_context)]
 
 
+class RunOut(BaseModel):
+    """The contract's run object (declared, so the schema and the contract check see its fields;
+    each step's output stays the JSON object it is)."""
+
+    step: str
+    tax_year: str
+    fingerprint: str | None
+    document: dict[str, Any] | None
+    validation: dict[str, Any] | None
+    research: dict[str, Any] | None
+    inputs_changed: bool
+    gate: dict[str, Any] | None
+    approved_at: str | None
+    done_at: str | None
+
+
+class ResultOut(TaxOut):
+    """004's result for the approved inputs, with the passages it rests on."""
+
+    passages: list[dict[str, Any]]
+
+
 def run_out(run: WorkflowRun) -> dict[str, Any]:
     """The contract's run object."""
     outputs = run.step_outputs or {}
@@ -89,7 +111,7 @@ def run_out(run: WorkflowRun) -> dict[str, Any]:
     }
 
 
-@router.get("")
+@router.get("", response_model=RunOut)
 async def read_run(ctx: Ctx) -> dict[str, Any]:
     """The current run, re-checked first if the inputs changed; 404 before the first start."""
     run = await service.get_run(ctx)
@@ -98,7 +120,7 @@ async def read_run(ctx: Ctx) -> dict[str, Any]:
     return run_out(run)
 
 
-@router.post("/start", dependencies=[Depends(require_json)])
+@router.post("/start", dependencies=[Depends(require_json)], response_model=RunOut)
 async def start_run(ctx: Ctx) -> dict[str, Any]:
     """Start (or restart) the run: steps 1-3, then the gate or what's missing."""
     return run_out(await service.start(ctx))
@@ -114,7 +136,7 @@ def _refused(error: InvalidTransition) -> HTTPException:
     return HTTPException(status.HTTP_409_CONFLICT, str(error))
 
 
-@router.post("/approve", dependencies=[Depends(require_json)])
+@router.post("/approve", dependencies=[Depends(require_json)], response_model=RunOut)
 async def approve_run(body: ApproveIn, ctx: Ctx) -> dict[str, Any]:
     """Record approval at the gate; 409 away from it or if the inputs changed since shown."""
     try:
@@ -125,7 +147,7 @@ async def approve_run(body: ApproveIn, ctx: Ctx) -> dict[str, Any]:
         raise _refused(error) from error
 
 
-@router.post("/back", dependencies=[Depends(require_json)])
+@router.post("/back", dependencies=[Depends(require_json)], response_model=RunOut)
 async def back_run(ctx: Ctx) -> dict[str, Any]:
     """Leave the gate for step 1."""
     try:
@@ -136,19 +158,19 @@ async def back_run(ctx: Ctx) -> dict[str, Any]:
         raise _refused(error) from error
 
 
-@router.get("/result")
+@router.get("/result", response_model=ResultOut)
 async def read_result(ctx: Ctx) -> dict[str, Any]:
     """004's result (exactly the Tax page's body) plus the research passages; 409 "Approval
     needed." unless approved for the current inputs."""
     found = await service.result(ctx)
     if found is None:
         raise HTTPException(status.HTTP_409_CONFLICT, APPROVAL_NEEDED)
-    run, tax = found
+    run, tax, _ = found
     research = (run.step_outputs or {}).get("research") or {}
     return {**tax_out(tax).model_dump(), "passages": research.get("passages", [])}
 
 
-@router.post("/done", dependencies=[Depends(require_json)])
+@router.post("/done", dependencies=[Depends(require_json)], response_model=RunOut)
 async def mark_done(ctx: Ctx) -> dict[str, Any]:
     """Mark the run done; 409 before its result."""
     try:

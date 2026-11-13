@@ -120,3 +120,36 @@ looks for pylint in the repo-root `.venv` for now (proposed change: task T043); 
   `1800000.00` are equal); tests that pass alone but fail in the full suite usually mean this.
 - Tests use `FakeAgentClient` (faked for every test by `no_real_ai`); the real
   `GeminiAgentClient` is tested through the SDK with an httpx2 `MockTransport`.
+
+## PDF export (feature 008)
+
+- PDFs come only from `app/reports`: Jinja2 templates in `app/reports/templates/` rendered by
+  WeasyPrint (`render.py`, in a thread). Every template extends `base.html`, whose running banner
+  puts the practitioner label, "Demo data only." and the validation status
+  (`app/reports/status.py`) on every page; never add a PDF that skips it (Principle IV).
+- A PDF shows the same result as its screen, from the same functions; never AI-written text
+  (summaries, agent notes). A blocked, not-ready or unapproved result exports nothing (`409`).
+- Outside Docker (CI's runner), WeasyPrint needs Pango, HarfBuzz and a font: the packages are
+  in `backend/Dockerfile` and installed by both backend CI jobs.
+
+## Guardrails (feature 008)
+
+- `.importlinter` keeps the AI out of the tax engine, the rates and the reconciliation;
+  `tests/guardrails/` proves Principles I, III and IV across the app (its README lists what each
+  file proves). CI's `guardrails` job runs both; run them with `uv run lint-imports` and
+  `uv run pytest tests/guardrails`.
+
+## Telemetry (feature 008)
+
+- For developers only: spans go to the backend logs (`OTEL_EXPORTER=console`, the default;
+  `none` silences them; tests default to `none`). There is no page for it in the app.
+- Wrap every use of Gemini in `app.telemetry.ai.ai_call(feature, model)`, opened where the
+  outcome is decided (around the call and the checks on its answer), and set `call.outcome`;
+  use `record_refusal` when a limit stops a use before any call. A new Gemini client reports
+  its tokens with `record_gemini_usage`.
+- Never add an attribute that carries content (a prompt, a reply, a figure, an email, an id, a
+  path with ids, SQL). `app/telemetry/setup.py` keeps only the attributes in `ALLOWED`; a new
+  one needs a reason and goes in data-model.md, and `tests/telemetry/test_no_content.py` must
+  still pass.
+- Database spans come from `instrument_engine` (our own listener: the SQLAlchemy
+  instrumentation doesn't support SQLAlchemy 2.1); a new engine should be wrapped with it.

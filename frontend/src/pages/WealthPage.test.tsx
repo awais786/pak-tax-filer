@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import type { Wealth } from "../api/wealth";
 import { hasProfile, mockFetch, noDocuments } from "../test/mockFetch";
 import type { FakeReply } from "../test/mockFetch";
+import { catchDownloads } from "../test/downloads";
 import { renderApp } from "../test/renderApp";
 
 // The wealth statement page, per specs/005-wealth-statement/contracts/wealth-api.md (tasks
@@ -101,6 +102,7 @@ function serve(
     "GET /api/documents": noDocuments,
     "GET /api/profile": hasProfile,
     "GET /api/wealth/2025-26": reply,
+    "GET /api/wealth/2025-26/pdf": () => ({ status: 200, body: {} }),
     "PUT /api/wealth/2025-26": ({ body }) => (onSave ? onSave(body) : reply()),
     "GET /api/wealth/2025-26/summary": () =>
       summary === "pending"
@@ -638,4 +640,54 @@ test("the personal expenses can be folded away and say how many are filled", asy
     target: { value: "500" },
   });
   expect(summary.textContent).toBe("Personal expenses (2 of 16 filled)");
+});
+
+// ---- PDF export (feature 008, task T008) ----
+
+test("a reconciled statement downloads its PDF", async () => {
+  const fetch = serve();
+  const saved = catchDownloads();
+  await open();
+
+  const button = screen.getByRole("button", { name: "Download PDF" });
+  expect(button.getAttribute("aria-disabled")).toBe("false");
+  fireEvent.click(button);
+
+  await waitFor(() => expect(saved).toHaveLength(1));
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/wealth/2025-26/pdf",
+    expect.anything(),
+  );
+});
+
+test("unsaved changes must be saved before the PDF, which is of the saved statement", async () => {
+  serve();
+  await open();
+
+  fireEvent.change(screen.getByLabelText(/net assets on 30 june 2025/i), {
+    target: { value: "2200000" },
+  });
+
+  const button = screen.getByRole("button", {
+    name: "Download PDF",
+    description: "Save your changes first: the PDF is of your saved statement.",
+  });
+  expect(button.getAttribute("aria-disabled")).toBe("true");
+});
+
+test("a statement not ready yet says why there is no PDF", async () => {
+  serve({
+    result: {
+      ...SAVED.result,
+      not_ready_reason: "needs_previous_net_assets",
+      message: "Enter last year's net assets to reconcile.",
+    },
+  });
+  await open();
+
+  const button = await screen.findByRole("button", {
+    name: "Download PDF",
+    description: "No PDF until your statement can be reconciled.",
+  });
+  expect(button.getAttribute("aria-disabled")).toBe("true");
 });

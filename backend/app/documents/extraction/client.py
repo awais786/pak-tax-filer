@@ -52,10 +52,25 @@ DOC_LABELS = {
     "bank_profit_certificate": "a bank profit certificate",
 }
 DECLINED_REASON = "The AI declined to read this document."
+# Google's side failed: said plainly, with what to do and that it cost nothing (FR-017, amended
+# 2026-11-13). Seen live on 2026-11-12: Gemini answering 504 after the 60-second deadline.
+GOOGLE_BUSY = (
+    "Google's AI service is busy and didn't answer in time. Your file is saved: press Retry in a "
+    "minute. This try doesn't count toward your daily limit."
+)
+GOOGLE_UNREACHABLE = (
+    "Couldn't reach Google's AI service. Your file is saved: press Retry in a minute. This try "
+    "doesn't count toward your daily limit."
+)
+# How the Documents page names each type, so the message says exactly which one to choose.
+TYPE_NAMES = {
+    "salary_certificate": "Salary certificate",
+    "bank_profit_certificate": "Bank profit certificate",
+}
 
 
 @dataclass(frozen=True)
-class ExtractionResult:
+class ExtractionResult:  # pylint: disable=too-many-instance-attributes  # a plain result record
     """What an extractor found: fields by name, or the reason it failed."""
 
     fields: Mapping[str, ExtractedValue] = field(default_factory=dict)
@@ -66,15 +81,27 @@ class ExtractionResult:
     limit_reached: bool = False
     # True when the document isn't the type the user chose (FR-005a): the upload is refused.
     wrong_type: bool = False
+    # True when Google's side failed (a 5xx, such as its 60-second 504, or no connection): the
+    # try isn't charged against the user's daily limit (FR-017, amended 2026-11-13).
+    service_failed: bool = False
     input_tokens: int = 0
     output_tokens: int = 0
 
 
 def failed(
-    reason: str, model: str | None = None, *, limit_reached: bool = False
+    reason: str,
+    model: str | None = None,
+    *,
+    limit_reached: bool = False,
+    service_failed: bool = False,
 ) -> ExtractionResult:
     """A failed extraction with a short reason for the user."""
-    return ExtractionResult(model=model, failure_reason=reason, limit_reached=limit_reached)
+    return ExtractionResult(
+        model=model,
+        failure_reason=reason,
+        limit_reached=limit_reached,
+        service_failed=service_failed,
+    )
 
 
 class Extractor(Protocol):
@@ -145,13 +172,17 @@ class GeminiExtractor:
         except errors.APIError as exc:
             # Only the type and status code are logged: never the document or the API's message.
             logger.warning("Extraction failed: %s %s", type(exc).__name__, exc.code)
-            return failed(_api_reason(exc), limit_reached=exc.code == 429)
+            return failed(
+                _api_reason(exc),
+                limit_reached=exc.code == 429,
+                service_failed=isinstance(exc, errors.ServerError),
+            )
         except httpx2.TimeoutException:
             logger.warning("Extraction failed: timeout")
-            return failed("Reading the document took too long. Try again.")
+            return failed(GOOGLE_BUSY, service_failed=True)
         except httpx2.TransportError as exc:
             logger.warning("Extraction failed: %s", type(exc).__name__)
-            return failed("Couldn't reach the AI service. Try again.")
+            return failed(GOOGLE_UNREACHABLE, service_failed=True)
         return _result_from(doc_type, response, self._model)
 
 
@@ -198,8 +229,11 @@ def _wrong_type_reason(chosen: DocType, seen: str) -> str:
     guess only as a hint, since the guess could be wrong."""
     reason = f"This doesn't look like {DOC_LABELS[chosen.value]}."
     if seen in DOC_LABELS:
-        reason += f" It may be {DOC_LABELS[seen]}."
-    return reason + " Check the file and the type you chose."
+        return (
+            f"{reason} It may be {DOC_LABELS[seen]}: if it is, choose "
+            f'"{TYPE_NAMES[seen]}" as the type and upload it again.'
+        )
+    return f"{reason} Check the file and the type you chose."
 
 
 def _error_reasons(exc: errors.APIError) -> set[str]:
@@ -218,7 +252,7 @@ def _api_reason(exc: errors.APIError) -> str:
         # Gemini answers a bad key with 400 and the structured reason API_KEY_INVALID.
         return "The AI service didn't accept the app's key."
     if isinstance(exc, errors.ServerError):
-        return "The AI service had a problem. Try again."
+        return GOOGLE_BUSY
     return "The AI service couldn't read this file."
 
 

@@ -25,6 +25,7 @@ from app.rag.embed import Embedder, EmbeddingError
 from app.rag.models import AskRequest, Passage
 from app.rag.search import RetrievedPassage, search
 from app.settings import get_settings
+from app.telemetry.ai import ai_call, record_refusal
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ async def ask(
     # deleted, and the app-wide lock is released before the slow part.
     await db.commit()
     if refused is not None:
+        record_refusal("assistant", get_settings().answer_model)
         return _refusal(refused)
     return (await answer_question(db, question, embedder, answerer)).result
 
@@ -155,7 +157,11 @@ async def _answer(
     if not found.covered:
         top = found.passages[0].score if found.passages else 0.0
         return Outcome(_refusal("not_covered"), "refused: cut-off", f"top score {top:.3f}")
-    reply = await answerer.answer(question, found.passages)
+    with ai_call("assistant", get_settings().answer_model) as call:
+        reply = await answerer.answer(question, found.passages)
+        cited = None if reply.not_covered else checked_citations(reply, found.passages)
+        if not reply.not_covered and cited is None:
+            call.outcome = "check_failed"
     # Still pointed to the Tax page when they asked for their own figure (FR-007).
     tax_page_line = TAX_PAGE_LINE if reply.asks_own_tax_figure else None
     not_covered = AskResult(
@@ -163,7 +169,6 @@ async def _answer(
     )
     if reply.not_covered:
         return Outcome(not_covered, "refused: model")
-    cited = checked_citations(reply, found.passages)
     if cited is None:
         return Outcome(not_covered, "refused: checks", f"{reply.citations}: {reply.answer}")
     answered = AskResult(

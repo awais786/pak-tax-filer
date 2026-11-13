@@ -203,7 +203,12 @@ each model tried.
   call the AI) in any 24 hours, and the whole app to 100. Over a limit, the request MUST be
   refused before the AI is called or any file is stored, with "Daily limit reached: 10
   extractions per 24 hours. Try again later." or "The app's daily extraction limit has been
-  reached. Try again later." (added 2026-11-09).
+  reached. Try again later." (added 2026-11-09). A try lost to Google's side (a server error,
+  such as its 504 after the 60-second deadline, or no connection) MUST NOT count: the document
+  is kept as failed, and its reason says the AI service is busy (or couldn't be reached), to
+  press Retry in a minute, and that the try didn't count (amended 2026-11-13, after the lead's
+  uploads failed this way on the live site on 2026-11-12). A refusal of the file itself
+  (unreadable, wrong type) still counts, since Google answered.
 - **FR-018**: Where a storage bucket is configured, uploaded files MUST be stored in it and
   nowhere else; the bucket MUST be private (no public access, no public links), and files MUST
   reach users only through the owner-checked file endpoint. Without a bucket (development,

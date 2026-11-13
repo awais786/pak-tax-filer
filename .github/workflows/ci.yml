@@ -39,6 +39,8 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.13.6"
+      - name: PDF libraries (WeasyPrint, feature 008; the same packages as backend/Dockerfile)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core
       - run: uv sync --frozen
       - name: Format (Ruff)
         run: uv run ruff format --check .
@@ -50,6 +52,99 @@ jobs:
         run: uv run alembic upgrade head && uv run alembic downgrade base && uv run alembic upgrade head
       - name: Tests (pytest)
         run: uv run pytest
+
+  # The constitution's guardrails across the whole app (feature 008, User Story 2): import rules,
+  # then the suite in backend/tests/guardrails (its README says what each file proves). Its own
+  # job, so a broken guardrail is named as such.
+  guardrails:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pak_tax_filer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pak_tax_filer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # CI-only database in the service container above; not a secret.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pak_tax_filer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+      - name: PDF libraries (WeasyPrint; every PDF page's banner is a guardrail)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core
+      - run: uv sync --frozen
+      - name: Import rules (lint-imports)
+        run: uv run lint-imports
+      - name: Guardrail suite
+        run: uv run pytest tests/guardrails
+
+  # Every started feature's contracts against the app (feature 001, User Story 7; issue #16):
+  # endpoints, tables, MCP tools and finished task lists. docs/contracts.md explains the messages.
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+      - run: uv sync --frozen --project backend
+      - name: The check's own tests
+        run: uv run --project backend pytest scripts/tests
+      - name: Contract check
+        env:
+          OTEL_EXPORTER: none
+        run: uv run --project backend python scripts/validate_contracts.py --all
+
+  # The real app in a real browser (Playwright, Chromium), with a fake Gemini so no test reaches
+  # Google; its own project name, so its own database (e2e/README.md).
+  e2e:
+    runs-on: ubuntu-latest
+    # A stuck stack or browser must fail the job, not hang it (review, PR #44).
+    timeout-minutes: 20
+    env:
+      COMPOSE: docker compose -p pak-e2e -f docker-compose.yml -f docker-compose.e2e.yml
+      E2E_BASE_URL: http://localhost:15173
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Start the app with the fake Gemini
+        run: |
+          $COMPOSE up -d --build
+          # curl itself retries (3 minutes at most), and a backend that never starts fails here.
+          curl -sf --retry 60 --retry-delay 3 --retry-connrefused --retry-all-errors http://localhost:18000/health >/dev/null || { echo "The backend never became healthy."; exit 1; }
+          $COMPOSE exec -T backend alembic upgrade head
+          curl -sf --retry 60 --retry-delay 3 --retry-connrefused --retry-all-errors http://localhost:15173/ >/dev/null || { echo "The frontend never started."; exit 1; }
+      - name: Install Playwright and Chromium
+        working-directory: e2e
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: End-to-end tests
+        working-directory: e2e
+        run: npx playwright test
+      - name: Logs of the app when a test failed
+        if: failure()
+        run: $COMPOSE logs --no-color --tail 200 backend fake-gemini
+      - name: Playwright report when a test failed
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
 
   frontend:
     runs-on: ubuntu-latest

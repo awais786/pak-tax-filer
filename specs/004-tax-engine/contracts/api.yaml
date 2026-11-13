@@ -25,5 +25,16 @@ paths:
                 - profit_balance
                 - non_atl_extra_withheld
                 - steps
-                - summary
                 - label
+  /api/tax/{tax_year}/summary:
+    # Added 2026-11-11 (feature 001, User Story 6): the AI summary has its own request.
+    get:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - summary

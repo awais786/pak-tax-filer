@@ -386,7 +386,8 @@ test("a failed extraction stays on this page with the reason and lists the docum
     ...FAILED,
     id: "d9",
     doc_type: "salary_certificate" as const,
-    failure_reason: "The AI service had a problem. Try again.",
+    failure_reason:
+      "Google's AI service is busy and didn't answer in time. Your file is saved: press Retry in a minute. This try doesn't count toward your daily limit.",
   };
   const fetch = mockFetch(
     routes({
@@ -405,7 +406,7 @@ test("a failed extraction stays on this page with the reason and lists the docum
   fireEvent.click(screen.getByRole("button", { name: /upload/i }));
 
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "The AI service had a problem. Try again.",
+    "Google's AI service is busy and didn't answer in time. Your file is saved: press Retry in a minute. This try doesn't count toward your daily limit.",
   );
   screen.getByRole("heading", { level: 1, name: /^documents$/i });
   await screen.findByRole("row", { name: /salary certificate/i });
@@ -420,8 +421,7 @@ test("a wrong-type refusal keeps the chosen type so the user can fix it and uplo
       "POST /api/documents": () => ({
         status: 422,
         body: {
-          detail:
-            "This doesn't look like a salary certificate. It may be a bank profit certificate. Check the file and the type you chose.",
+          detail: `This doesn't look like a salary certificate. It may be a bank profit certificate: if it is, choose "Bank profit certificate" as the type and upload it again.`,
         },
       }),
     }),

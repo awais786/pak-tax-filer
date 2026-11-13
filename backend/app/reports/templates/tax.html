@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Your tax for {{ result.tax_year }}{% endblock %}
+{% block content %}
+<h1>Your tax for {{ result.tax_year }}</h1>
+
+<h2>Salary</h2>
+<p class="headline">{{ balance(result.salary_balance, "over-deducted") }}</p>
+<p class="muted">After tax deducted by employers</p>
+<table>
+  <tr><td>Salary tax</td><td class="amount">{{ rupees(result.salary_tax) }}</td></tr>
+  <tr><td>Surcharge</td><td class="amount">{{ rupees(result.surcharge) }}</td></tr>
+  <tr><td>Less tax deducted by employers</td><td class="amount">− {{ rupees(result.salary_credit) }}</td></tr>
+</table>
+
+<h2>Bank profit</h2>
+<p class="headline">{{ balance(result.profit_balance, "over-withheld") }}</p>
+<p class="muted">After tax withheld by banks</p>
+<table>
+  <tr><td>Tax on bank profit</td><td class="amount">{{ rupees(result.profit_tax) }}</td></tr>
+  <tr><td>Less tax withheld by banks</td><td class="amount">− {{ rupees(result.profit_credit) }}</td></tr>
+</table>
+{% if result.non_atl_extra_withheld is not none %}
+<p><strong>Not on the ATL:</strong> {{ rupees(result.non_atl_extra_withheld) }} extra tax withheld; whether it can be reclaimed needs confirmation.</p>
+{% endif %}
+<p class="muted">The two sides are shown separately; they are not added together.</p>
+
+<h2>How it was worked out</h2>
+<ol class="steps">
+{% for step in result.steps %}
+  <li>{{ step.description }}<span class="source">Source: {{ step.rule_location }}</span></li>
+{% endfor %}
+</ol>
+
+{% if passages %}
+<h2>The law it rests on</h2>
+<ul>
+{% for passage in passages %}
+  <li>{{ "Law" if passage.kind == "law" else "Guidance" }}: {{ passage.source }}, {{ passage.location }}, page {{ passage.page }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

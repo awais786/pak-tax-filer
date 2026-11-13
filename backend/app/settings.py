@@ -47,6 +47,8 @@ class Settings:  # pylint: disable=too-many-instance-attributes  # one field per
     # Feature 007, research R6: the model behind the guided run's agents (never the figures).
     workflow_model: str = "gemini-3.5-flash-lite"
     workflow_effort: str = "minimal"
+    # Feature 008, research R1: telemetry to the backend logs ("console") or nowhere ("none").
+    otel_exporter: str = "console"
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
@@ -83,7 +85,17 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         ask_daily_limit=_positive_int(environ, "ASK_DAILY_LIMIT", default=200),
         workflow_model=environ.get("WORKFLOW_MODEL", "").strip() or "gemini-3.5-flash-lite",
         workflow_effort=_effort(environ, "WORKFLOW_EFFORT", default="minimal"),
+        otel_exporter=otel_exporter(environ),
     )
+
+
+def otel_exporter(environ: Mapping[str, str]) -> str:
+    """Where telemetry goes; anything but console or none is refused (no viewer in 008). Read
+    on its own by app.telemetry, so importing the app needs no DATABASE_URL."""
+    exporter = environ.get("OTEL_EXPORTER", "console").strip().lower()
+    if exporter not in ("console", "none"):
+        raise ValueError(f"OTEL_EXPORTER must be console or none, not {exporter!r}.")
+    return exporter
 
 
 def _positive_int(environ: Mapping[str, str], name: str, default: int) -> int:

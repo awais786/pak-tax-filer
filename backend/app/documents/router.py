@@ -246,7 +246,7 @@ async def upload_document(  # pylint: disable=too-many-arguments,too-many-positi
             file_path=location,
         )
         try:
-            await extract_document(db, document, extractor, content)
+            await extract_document(db, document, extractor, content, attempt)
         except WrongDocumentType as wrong:
             # Refused, not kept (FR-005a): retrying the same type would only fail again.
             await db.delete(document)

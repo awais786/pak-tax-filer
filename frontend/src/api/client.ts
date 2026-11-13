@@ -117,3 +117,24 @@ function detailMessage(data: unknown, status: number): string {
   }
   return `Request failed (${status}).`;
 }
+
+/**
+ * Download a file (feature 008's PDFs): its contents and the name the server gave it, or an
+ * ApiError with the server's `detail` (e.g. a 409 when the result changed since the page
+ * loaded), so a failure is shown on the page instead of as a broken download.
+ */
+export async function apiDownload(
+  path: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    headers: { Accept: "application/pdf, application/json" },
+  });
+  if (!response.ok) {
+    await readReply<never>(response, false); // throws the server's reason
+  }
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename =
+    /filename="([^"]+)"/.exec(disposition)?.[1] ?? "download.pdf";
+  return { blob: await response.blob(), filename };
+}

@@ -9,6 +9,7 @@ import {
   getRun,
   markDone,
   startRun,
+  WORKFLOW_PDF_URL,
 } from "../api/workflow";
 import type { Passage, Run, Step, WorkflowResult } from "../api/workflow";
 import { TaxResultView } from "../components/TaxResultView";
@@ -371,7 +372,7 @@ function ResultView({
       <h2 id="result-heading" ref={heading} tabIndex={-1}>
         Your result
       </h2>
-      <TaxResultView result={result} />
+      <TaxResultView result={result} pdfUrl={WORKFLOW_PDF_URL} />
       {result.passages.length > 0 && (
         <section className="panel" aria-labelledby="sources-heading">
           <h2 id="sources-heading">The law it rests on</h2>

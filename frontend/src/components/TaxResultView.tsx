@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { balanceWords, getTaxSummary, rupees } from "../api/tax";
 import type { TaxResult } from "../api/tax";
+import { DownloadPdfButton } from "./DownloadPdfButton";
 import { SummaryPanel } from "./SummaryPanel";
 
 // A tax result as 004's engine returns it (feature 004; moved here for 007's guided run, task
@@ -17,11 +18,26 @@ const FIX_LINKS: Record<string, { to: string; text: string }> = {
   },
 };
 
-export function TaxResultView({ result }: { result: TaxResult }) {
+export function TaxResultView({
+  result,
+  pdfUrl,
+}: {
+  result: TaxResult;
+  /** Where this result's PDF downloads from (feature 008). */
+  pdfUrl: string;
+}) {
   const fix = FIX_LINKS[result.blocked_reason ?? ""];
   return (
     <>
       <p className="notice">{result.label}</p>
+      <DownloadPdfButton
+        url={pdfUrl}
+        disabledReason={
+          result.blocked_reason === null
+            ? null
+            : "No PDF until this result can be calculated."
+        }
+      />
       {result.blocked_reason !== null ? (
         <p className="panel">
           {result.message}

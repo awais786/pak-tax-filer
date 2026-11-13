@@ -18,6 +18,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.documents.extraction.client import THINKING_LEVELS
 from app.rag.answer import GOOGLE_DEADLINE_MS, RETRY
+from app.telemetry.ai import record_gemini_usage, tool_call
 from app.workflow.settings import MAX_SEARCHES
 from app.workflow.tools import Toolbox
 
@@ -51,13 +52,15 @@ async def call_tool(
     """Run one tool the agent asked for; anything outside its own tools is refused."""
     if name not in allowed:
         raise AgentError(f"The agent asked for a tool it doesn't have: {name}.")
-    try:
-        return await getattr(tools, name)(**arguments)
-    except TypeError as exc:
-        raise AgentError(f"The agent called {name} with the wrong arguments.") from exc
-    except (AttributeError, ValueError) as exc:
-        # E.g. a number where the tool expects text (backend review M2).
-        raise AgentError(f"The agent called {name} with unusable arguments.") from exc
+    # One of the agent's own tools (checked above), so the name is never the model's free text.
+    with tool_call(name):
+        try:
+            return await getattr(tools, name)(**arguments)
+        except TypeError as exc:
+            raise AgentError(f"The agent called {name} with the wrong arguments.") from exc
+        except (AttributeError, ValueError) as exc:
+            # E.g. a number where the tool expects text (backend review M2).
+            raise AgentError(f"The agent called {name} with unusable arguments.") from exc
 
 
 @dataclass
@@ -199,6 +202,7 @@ async def _generate(
         )
     except (errors.APIError, httpx2.HTTPError) as exc:
         raise AgentError(type(exc).__name__) from exc
+    record_gemini_usage(response.usage_metadata)
     candidates = response.candidates or []
     if not candidates or candidates[0].finish_reason != types.FinishReason.STOP:
         raise AgentError("The reply was cut short or blocked.")

@@ -163,18 +163,19 @@ async def test_blocked_cut_off_or_unusable_replies_fail_cleanly(body: Any, expec
 
 
 @pytest.mark.parametrize(
-    ("status", "expected", "limit_reached"),
+    ("status", "expected", "limit_reached", "service_failed"),
     [
-        (429, "free AI limit", True),
-        (500, "problem", False),
-        (503, "problem", False),
-        (401, "key", False),
-        (403, "key", False),
-        (400, "couldn't read", False),
+        (429, "free AI limit", True, False),
+        (500, "busy", False, True),
+        (503, "busy", False, True),
+        (504, "busy", False, True),  # Google's 60-second deadline (seen live, 2026-11-12)
+        (401, "key", False, False),
+        (403, "key", False, False),
+        (400, "couldn't read", False, False),
     ],
 )
 async def test_api_errors_become_short_reasons(
-    status: int, expected: str, limit_reached: bool
+    status: int, expected: str, limit_reached: bool, service_failed: bool
 ) -> None:
     """Fails if an API error escapes, its reason is unclear, or its details leak (R1)."""
     error = {"error": {"code": status, "message": "secret details", "status": "X"}}
@@ -186,6 +187,8 @@ async def test_api_errors_become_short_reasons(
     assert expected in result.failure_reason
     assert "secret details" not in result.failure_reason
     assert result.limit_reached is limit_reached
+    # Google's side failed (5xx): the try isn't charged to the user (FR-017, amended).
+    assert result.service_failed is service_failed
 
 
 async def test_an_invalid_key_is_reported_as_the_key_not_the_file() -> None:
@@ -210,7 +213,7 @@ async def test_an_invalid_key_is_reported_as_the_key_not_the_file() -> None:
 
 @pytest.mark.parametrize(
     ("network_error", "expected"),
-    [(httpx2.ReadTimeout("slow"), "too long"), (httpx2.ConnectError("down"), "reach")],
+    [(httpx2.ReadTimeout("slow"), "busy"), (httpx2.ConnectError("down"), "reach")],
 )
 async def test_network_failures_become_short_reasons(
     network_error: Exception, expected: str
@@ -224,27 +227,36 @@ async def test_network_failures_become_short_reasons(
 
     assert result.failure_reason is not None
     assert expected in result.failure_reason
+    assert "Retry" in result.failure_reason
+    assert result.service_failed is True
 
 
 @pytest.mark.parametrize(
     ("seen", "expected"),
     [
-        ("salary_certificate", "It may be a salary certificate"),
-        ("other", "doesn't look like a bank profit certificate"),
+        (
+            "salary_certificate",
+            "This doesn't look like a bank profit certificate. It may be a salary certificate: "
+            'if it is, choose "Salary certificate" as the type and upload it again.',
+        ),
+        (
+            "other",
+            "This doesn't look like a bank profit certificate. "
+            "Check the file and the type you chose.",
+        ),
     ],
 )
 async def test_a_document_of_another_type_fails_with_a_clear_reason(
     seen: str, expected: str
 ) -> None:
-    """Fails if a document of the wrong type is reviewed as empty fields (FR-005a)."""
+    """Fails if a document of the wrong type is reviewed as empty fields, or the message doesn't
+    say which type to choose when the AI has a guess, still only as a hint (FR-005a)."""
     gemini = extractor(replying(reply(json.dumps({**BANK_REPLY, "document_type": seen}))))
 
     result = await gemini.extract(DocType.BANK_PROFIT_CERTIFICATE, PDF, "application/pdf")
 
-    assert result.failure_reason is not None
-    assert expected in result.failure_reason
-    assert result.failure_reason.startswith("This doesn't look like a bank profit certificate.")
-    assert "Check the file and the type you chose." in result.failure_reason
+    assert result.failure_reason == expected
+    assert result.wrong_type is True
     assert not result.fields
 
 
@@ -292,7 +304,7 @@ async def test_a_lasting_outage_still_fails_cleanly() -> None:
 
     assert len(sent) == 3
     assert result.failure_reason is not None
-    assert "problem" in result.failure_reason
+    assert "busy" in result.failure_reason
 
 
 async def test_a_deadline_timeout_is_not_retried() -> None:

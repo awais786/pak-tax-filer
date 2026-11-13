@@ -122,3 +122,7 @@ export const EXPENSE_CATEGORIES: [string, string][] = [
   ["foreign_travel", "Foreign travelling"],
   ["local_travel", "Local travelling"],
 ];
+
+/** The wealth statement as a PDF (feature 008): a download address, not a fetch. */
+export const wealthPdfUrl = (taxYear: string) =>
+  `/api/wealth/${encodeURIComponent(taxYear)}/pdf`;

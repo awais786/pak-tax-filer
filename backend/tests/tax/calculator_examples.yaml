@@ -1,0 +1,604 @@
+# Worked examples for the simple tax calculator (feature 010, tasks T002-T003; FR-012).
+#
+# Each example is worked by hand from the Income Tax Ordinance, 2001 as amended up to 31.07.2025
+# (FBR; the copy pinned by SHA-256 in app/rag/sources.yaml), using the rules and pages in
+# specs/010-income-tax-engine/research.md. They become the calculator's tests (T009, T015,
+# T018), so they must be right BEFORE any calculator code exists.
+#
+# SIGN-OFF (T003): ACCEPTED PROVISIONALLY by Saifullah Khan on 2026-11-14. The examples were
+# worked out by Claude from the Ordinance pages in research.md and their arithmetic
+# cross-checked by an independent script; they were NOT checked by hand line by line. Saifullah
+# chose to go ahead because a tax practitioner will review the app (Principle IV): every example
+# and every rule they rest on must be revised then, and corrected here first if the practitioner
+# disagrees. test_sign_off.py fails on any example without a signer and date.
+#
+# Rules used (research.md; p. = printed page, PDF p. = page in the file):
+# - Yearly amounts: salary income = salary_monthly x 12 + bonus (bonus is salary, s.12(2)(a),
+#   p. 48); rent = rent_monthly x 12.
+# - Property income = rent - one-fifth of rent (repairs allowance, s.15A(1)(a), p. 57). Rent is
+#   slab income: separate rates for individuals were omitted by FA2021 (R1).
+# - Taxable income = salary income + property income. Dividends and bank profit are final taxes
+#   kept out of it (s.8(1)(a), p. 44-45), so they never count in the 75% test or the 10m limit.
+# - Table: salaried (clause (2), p. 491-492) when salary income EXCEEDS 75% of taxable income;
+#   otherwise non-salaried (clause (1), p. 489-490). Exactly 75% is not "exceeds".
+# - Upper limits "do not exceed"; the Rs 10,000,000 surcharge limit "exceeds" (s.4AB, p. 33):
+#   9% of the slab tax with any salary income, 10% without.
+# - Dividends 15% (s.5, Division III(b), p. 499); bank profit 20% (s.7B, Division IIIA(a),
+#   p. 500); bank profit above 5,000,000 is refused (s.7B(3)(b)): profit_over_limit.
+# - Rounding (s.219, p. 436): each of slab tax, surcharge, dividend tax and profit tax is
+#   rounded to the rupee, 50 paisa or more up; total_tax = the sum of those rounded lines.
+# - salary_share = salary income / taxable income x 100, to 2 places (half up); null without
+#   taxable income. effective_rate = total_tax / (salary income + rent + dividends + bank profit)
+#   x 100, to 1 place (half up); gross rent, before the allowance.
+# - monthly (s.149, p. 308): tax on salary_monthly x 12 alone on the salaried table (+9% above
+#   10m), / 12, rounded; take_home = salary_monthly - that. Null without a monthly salary.
+# - bonus_impact = total_tax - total_tax with the bonus at 0; null unless salary and bonus > 0.
+# - filer_comparison: deductions at source, not tax: dividends 15% filer / 30% not on the ATL
+#   (Part III Division I(b), p. 519; Tenth Schedule rule 1, p. 761); bank profit 20% / 40%
+#   (Part III Division IA(a), p. 521). "your" follows the profile's ATL status.
+#
+# Salaried rows: 1 <=600k: 0 | 2 <=1.2m: 1% over 600k | 3 <=2.2m: 6,000 + 11% over 1.2m |
+#   4 <=3.2m: 116,000 + 23% over 2.2m | 5 <=4.1m: 346,000 + 30% over 3.2m | 6: 616,000 + 35%
+#   over 4.1m.
+# Non-salaried rows: 1 <=600k: 0 | 2 <=1.2m: 15% over 600k | 3 <=1.6m: 90,000 + 20% over 1.2m |
+#   4 <=3.2m: 170,000 + 30% over 1.6m | 5 <=5.6m: 650,000 + 40% over 3.2m | 6: 1,610,000 + 45%
+#   over 5.6m.
+#
+# Inputs not listed are "0"; atl is true unless listed. Expected fields not listed are: blocked
+# null, surcharge/dividend_tax/profit_tax "0", bonus_impact null, filer_comparison [].
+# The arithmetic was cross-checked with a calculator when the examples were written.
+
+tax_year: "2025-26"
+
+examples:
+  # ---- The lead's example --------------------------------------------------------------------
+
+  - id: lead-salary-and-rent
+    description: Salary Rs 250,000 and rent Rs 140,000 a month (the lead's example).
+    inputs: {salary_monthly: "250000", rent_monthly: "140000"}
+    working:
+      - "Salary income 250,000 x 12 = 3,000,000. Rent 140,000 x 12 = 1,680,000."
+      - "Property income = 1,680,000 - 1,680,000 / 5 (336,000) = 1,344,000 (s.15A(1)(a))."
+      - "Taxable income = 3,000,000 + 1,344,000 = 4,344,000."
+      - "Salary share 3,000,000 / 4,344,000 = 69.06%: not more than 75%, non-salaried table."
+      - "Non-salaried row 5: 650,000 + 40% x (4,344,000 - 3,200,000 = 1,144,000) = 1,107,600."
+      - "Taxable income does not exceed 10,000,000: no surcharge. Total 1,107,600."
+      - "Effective rate 1,107,600 / (3,000,000 + 1,680,000) = 23.67% -> 23.7."
+      - "Monthly: 3,000,000 on the salaried table row 4 = 116,000 + 23% x 800,000 = 300,000;
+        / 12 = 25,000; take-home 225,000."
+    expected: {taxable_income: "4344000", salary_share: "69.06", table: non_salaried,
+               slab_tax: "1107600", total_tax: "1107600", effective_rate: "23.7",
+               monthly: {salary_tax: "25000", take_home: "225000"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- Salary only: every salaried row, inside and on its upper limit ------------------------
+
+  - id: salary-row-1-inside
+    description: Salary 40,000 a month (480,000) is in row 1.
+    inputs: {salary_monthly: "40000"}
+    working:
+      - "480,000 does not exceed 600,000: row 1, tax 0. Effective 0.0. Monthly 0, take-home 40,000."
+    expected: {taxable_income: "480000", salary_share: "100.00", table: salaried, slab_tax: "0",
+               total_tax: "0", effective_rate: "0.0",
+               monthly: {salary_tax: "0", take_home: "40000"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-1-limit
+    description: Exactly 600,000 stays in row 1.
+    inputs: {salary_monthly: "50000"}
+    working:
+      - "600,000 does not exceed 600,000: row 1, tax 0."
+    expected: {taxable_income: "600000", salary_share: "100.00", table: salaried, slab_tax: "0",
+               total_tax: "0", effective_rate: "0.0",
+               monthly: {salary_tax: "0", take_home: "50000"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-2-inside
+    description: Salary 80,000 a month (960,000) is in row 2.
+    inputs: {salary_monthly: "80000"}
+    working:
+      - "Row 2: 1% x (960,000 - 600,000) = 3,600. Effective 3,600 / 960,000 = 0.375% -> 0.4."
+      - "Monthly 3,600 / 12 = 300; take-home 79,700."
+    expected: {taxable_income: "960000", salary_share: "100.00", table: salaried,
+               slab_tax: "3600", total_tax: "3600", effective_rate: "0.4",
+               monthly: {salary_tax: "300", take_home: "79700"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-2-limit
+    description: Exactly 1,200,000 stays in row 2.
+    inputs: {salary_monthly: "100000"}
+    working:
+      - "Row 2: 1% x 600,000 = 6,000. Effective 0.5. Monthly 500; take-home 99,500."
+    expected: {taxable_income: "1200000", salary_share: "100.00", table: salaried,
+               slab_tax: "6000", total_tax: "6000", effective_rate: "0.5",
+               monthly: {salary_tax: "500", take_home: "99500"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-3-inside
+    description: Salary 150,000 a month (1,800,000) is in row 3.
+    inputs: {salary_monthly: "150000"}
+    working:
+      - "Row 3: 6,000 + 11% x 600,000 = 72,000. Effective 4.0. Monthly 6,000; take-home 144,000."
+    expected: {taxable_income: "1800000", salary_share: "100.00", table: salaried,
+               slab_tax: "72000", total_tax: "72000", effective_rate: "4.0",
+               monthly: {salary_tax: "6000", take_home: "144000"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-3-limit
+    description: Salary 150,000 a month plus a 400,000 bonus is exactly 2,200,000, row 3.
+    inputs: {salary_monthly: "150000", bonus: "400000"}
+    working:
+      - "Salary income 1,800,000 + 400,000 = 2,200,000: row 3, 6,000 + 11% x 1,000,000 = 116,000."
+      - "Without the bonus: 72,000, so the bonus adds 44,000. Effective 116,000 / 2,200,000 =
+        5.27% -> 5.3."
+      - "Monthly (bonus left out): 6,000; take-home 144,000."
+    expected: {taxable_income: "2200000", salary_share: "100.00", table: salaried,
+               slab_tax: "116000", total_tax: "116000", effective_rate: "5.3",
+               monthly: {salary_tax: "6000", take_home: "144000"}, bonus_impact: "44000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-4-inside
+    description: Salary 250,000 a month (3,000,000) is in row 4.
+    inputs: {salary_monthly: "250000"}
+    working:
+      - "Row 4: 116,000 + 23% x 800,000 = 300,000. Effective 10.0. Monthly 25,000; take-home
+        225,000."
+    expected: {taxable_income: "3000000", salary_share: "100.00", table: salaried,
+               slab_tax: "300000", total_tax: "300000", effective_rate: "10.0",
+               monthly: {salary_tax: "25000", take_home: "225000"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-4-limit
+    description: 250,000 a month plus a 200,000 bonus is exactly 3,200,000, row 4.
+    inputs: {salary_monthly: "250000", bonus: "200000"}
+    working:
+      - "Row 4: 116,000 + 23% x 1,000,000 = 346,000. Without the bonus 300,000: adds 46,000."
+      - "Effective 346,000 / 3,200,000 = 10.81% -> 10.8. Monthly 25,000; take-home 225,000."
+    expected: {taxable_income: "3200000", salary_share: "100.00", table: salaried,
+               slab_tax: "346000", total_tax: "346000", effective_rate: "10.8",
+               monthly: {salary_tax: "25000", take_home: "225000"}, bonus_impact: "46000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-5-inside
+    description: Salary 300,000 a month (3,600,000) is in row 5.
+    inputs: {salary_monthly: "300000"}
+    working:
+      - "Row 5: 346,000 + 30% x 400,000 = 466,000. Effective 12.94% -> 12.9."
+      - "Monthly 466,000 / 12 = 38,833.33 -> 38,833; take-home 261,167."
+    expected: {taxable_income: "3600000", salary_share: "100.00", table: salaried,
+               slab_tax: "466000", total_tax: "466000", effective_rate: "12.9",
+               monthly: {salary_tax: "38833", take_home: "261167"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-5-limit
+    description: 300,000 a month plus a 500,000 bonus is exactly 4,100,000, row 5.
+    inputs: {salary_monthly: "300000", bonus: "500000"}
+    working:
+      - "Row 5: 346,000 + 30% x 900,000 = 616,000. Without the bonus 466,000: adds 150,000."
+      - "Effective 616,000 / 4,100,000 = 15.02% -> 15.0. Monthly 38,833; take-home 261,167."
+    expected: {taxable_income: "4100000", salary_share: "100.00", table: salaried,
+               slab_tax: "616000", total_tax: "616000", effective_rate: "15.0",
+               monthly: {salary_tax: "38833", take_home: "261167"}, bonus_impact: "150000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-row-6-inside
+    description: Salary 500,000 a month (6,000,000) is in row 6.
+    inputs: {salary_monthly: "500000"}
+    working:
+      - "Row 6: 616,000 + 35% x 1,900,000 = 1,281,000. Effective 21.35% -> 21.4."
+      - "Monthly 1,281,000 / 12 = 106,750; take-home 393,250."
+    expected: {taxable_income: "6000000", salary_share: "100.00", table: salaried,
+               slab_tax: "1281000", total_tax: "1281000", effective_rate: "21.4",
+               monthly: {salary_tax: "106750", take_home: "393250"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- The Rs 10 million surcharge limit -----------------------------------------------------
+
+  - id: salary-exactly-10m
+    description: Taxable income exactly 10,000,000 has no surcharge ("exceeds").
+    inputs: {salary_monthly: "800000", bonus: "400000"}
+    working:
+      - "Salary income 9,600,000 + 400,000 = 10,000,000. Row 6: 616,000 + 35% x 5,900,000 =
+        2,681,000. 10,000,000 does not exceed 10,000,000: no surcharge."
+      - "Without the bonus (9,600,000): 616,000 + 35% x 5,500,000 = 2,541,000; adds 140,000."
+      - "Effective 26.81% -> 26.8. Monthly 2,541,000 / 12 = 211,750; take-home 588,250."
+    expected: {taxable_income: "10000000", salary_share: "100.00", table: salaried,
+               slab_tax: "2681000", surcharge: "0", total_tax: "2681000",
+               effective_rate: "26.8", monthly: {salary_tax: "211750", take_home: "588250"},
+               bonus_impact: "140000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-over-10m
+    description: "Just over 10,000,000 with salary: 9% surcharge."
+    inputs: {salary_monthly: "833334"}
+    working:
+      - "833,334 x 12 = 10,000,008. Row 6: 616,000 + 35% x 5,900,008 = 2,681,002.80 -> 2,681,003."
+      - "Exceeds 10,000,000; salary income, so 9% of 2,681,002.80 = 241,290.252 -> 241,290."
+      - "Total 2,681,003 + 241,290 = 2,922,293. Effective 29.22% -> 29.2."
+      - "Monthly: (2,681,002.80 + 241,290.252) / 12 = 243,524.42 -> 243,524; take-home 589,810."
+    expected: {taxable_income: "10000008", salary_share: "100.00", table: salaried,
+               slab_tax: "2681003", surcharge: "241290", total_tax: "2922293",
+               effective_rate: "29.2", monthly: {salary_tax: "243524", take_home: "589810"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-over-10m
+    description: "Rent only, over 10,000,000: non-salaried table and 10% surcharge."
+    inputs: {rent_monthly: "1100000"}
+    working:
+      - "Rent 13,200,000; property income 13,200,000 - 2,640,000 = 10,560,000."
+      - "No salary: share 0.00, non-salaried row 6: 1,610,000 + 45% x 4,960,000 = 3,842,000."
+      - "Exceeds 10,000,000, no salary income: 10% = 384,200. Total 4,226,200."
+      - "Effective 4,226,200 / 13,200,000 = 32.02% -> 32.0. No monthly salary: monthly null."
+    expected: {taxable_income: "10560000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "3842000", surcharge: "384200", total_tax: "4226200",
+               effective_rate: "32.0", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-and-bonus-exactly-10m
+    description: "Rent plus a bonus landing exactly on 10,000,000: no surcharge."
+    inputs: {bonus: "400000", rent_monthly: "1000000"}
+    working:
+      - "Rent 12,000,000; property income 9,600,000. Salary income (bonus) 400,000."
+      - "Taxable 10,000,000; share 4.00%: non-salaried row 6: 1,610,000 + 45% x 4,400,000 =
+        3,590,000. Does not exceed 10,000,000: no surcharge."
+      - "Effective 3,590,000 / 12,400,000 = 28.95% -> 29.0. No monthly salary: monthly and
+        bonus impact null."
+    expected: {taxable_income: "10000000", salary_share: "4.00", table: non_salaried,
+               slab_tax: "3590000", surcharge: "0", total_tax: "3590000",
+               effective_rate: "29.0", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- Rent only: every non-salaried row, inside and on its upper limit ----------------------
+
+  - id: rent-row-1-inside
+    description: Rent 50,000 a month (property income 480,000) is in row 1.
+    inputs: {rent_monthly: "50000"}
+    working:
+      - "Rent 600,000; property income 480,000; share 0.00, non-salaried row 1: tax 0."
+    expected: {taxable_income: "480000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "0", total_tax: "0", effective_rate: "0.0", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-1-limit
+    description: Property income exactly 600,000 stays in row 1.
+    inputs: {rent_monthly: "62500"}
+    working:
+      - "Rent 750,000; property income 600,000: row 1, tax 0."
+    expected: {taxable_income: "600000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "0", total_tax: "0", effective_rate: "0.0", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-2-inside
+    description: Rent 100,000 a month (property income 960,000) is in row 2.
+    inputs: {rent_monthly: "100000"}
+    working:
+      - "Rent 1,200,000; property income 960,000; row 2: 15% x 360,000 = 54,000."
+      - "Effective 54,000 / 1,200,000 = 4.5."
+    expected: {taxable_income: "960000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "54000", total_tax: "54000", effective_rate: "4.5", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-2-limit
+    description: Property income exactly 1,200,000 stays in row 2.
+    inputs: {rent_monthly: "125000"}
+    working:
+      - "Rent 1,500,000; property income 1,200,000; row 2: 15% x 600,000 = 90,000. Effective 6.0."
+    expected: {taxable_income: "1200000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "90000", total_tax: "90000", effective_rate: "6.0", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-3-inside
+    description: Rent 150,000 a month (property income 1,440,000) is in row 3.
+    inputs: {rent_monthly: "150000"}
+    working:
+      - "Rent 1,800,000; property income 1,440,000; row 3: 90,000 + 20% x 240,000 = 138,000."
+      - "Effective 138,000 / 1,800,000 = 7.67% -> 7.7."
+    expected: {taxable_income: "1440000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "138000", total_tax: "138000", effective_rate: "7.7", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-3-limit
+    description: Property income 1,200,000 plus a 400,000 bonus is exactly 1,600,000, row 3.
+    inputs: {bonus: "400000", rent_monthly: "125000"}
+    working:
+      - "Taxable 400,000 + 1,200,000 = 1,600,000; share 25.00%: non-salaried row 3: 90,000 +
+        20% x 400,000 = 170,000."
+      - "Effective 170,000 / 1,900,000 = 8.95% -> 8.9 (8.947...). No monthly salary: monthly and
+        bonus impact null."
+    expected: {taxable_income: "1600000", salary_share: "25.00", table: non_salaried,
+               slab_tax: "170000", total_tax: "170000", effective_rate: "8.9", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-4-inside
+    description: Rent 250,000 a month (property income 2,400,000) is in row 4.
+    inputs: {rent_monthly: "250000"}
+    working:
+      - "Rent 3,000,000; property income 2,400,000; row 4: 170,000 + 30% x 800,000 = 410,000."
+      - "Effective 410,000 / 3,000,000 = 13.67% -> 13.7."
+    expected: {taxable_income: "2400000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "410000", total_tax: "410000", effective_rate: "13.7", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-4-limit
+    description: Property income 2,400,000 plus an 800,000 bonus is exactly 3,200,000, row 4.
+    inputs: {bonus: "800000", rent_monthly: "250000"}
+    working:
+      - "Taxable 800,000 + 2,400,000 = 3,200,000; share 25.00%: row 4: 170,000 + 30% x
+        1,600,000 = 650,000."
+      - "Effective 650,000 / 3,800,000 = 17.11% -> 17.1."
+    expected: {taxable_income: "3200000", salary_share: "25.00", table: non_salaried,
+               slab_tax: "650000", total_tax: "650000", effective_rate: "17.1", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-5-inside
+    description: Rent 500,000 a month (property income 4,800,000) is in row 5.
+    inputs: {rent_monthly: "500000"}
+    working:
+      - "Rent 6,000,000; property income 4,800,000; row 5: 650,000 + 40% x 1,600,000 =
+        1,290,000. Effective 21.5."
+    expected: {taxable_income: "4800000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "1290000", total_tax: "1290000", effective_rate: "21.5", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-5-limit
+    description: Property income 4,800,000 plus an 800,000 bonus is exactly 5,600,000, row 5.
+    inputs: {bonus: "800000", rent_monthly: "500000"}
+    working:
+      - "Taxable 800,000 + 4,800,000 = 5,600,000; share 14.29%: row 5: 650,000 + 40% x
+        2,400,000 = 1,610,000."
+      - "Effective 1,610,000 / 6,800,000 = 23.68% -> 23.7."
+    expected: {taxable_income: "5600000", salary_share: "14.29", table: non_salaried,
+               slab_tax: "1610000", total_tax: "1610000", effective_rate: "23.7", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: rent-row-6-inside
+    description: Rent 1,000,000 a month (property income 9,600,000) is in row 6.
+    inputs: {rent_monthly: "1000000"}
+    working:
+      - "Rent 12,000,000; property income 9,600,000; row 6: 1,610,000 + 45% x 4,000,000 =
+        3,410,000. Not over 10,000,000. Effective 28.42% -> 28.4."
+    expected: {taxable_income: "9600000", salary_share: "0.00", table: non_salaried,
+               slab_tax: "3410000", total_tax: "3410000", effective_rate: "28.4", monthly: null}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- The 75% test --------------------------------------------------------------------------
+
+  - id: share-exactly-75
+    description: Salary exactly 75% of taxable income uses the non-salaried table.
+    inputs: {salary_monthly: "300000", rent_monthly: "125000"}
+    working:
+      - "Salary income 3,600,000; property income 1,200,000; taxable 4,800,000."
+      - "Share 3,600,000 / 4,800,000 = 75.00%: does not exceed 75%: non-salaried row 5:
+        650,000 + 40% x 1,600,000 = 1,290,000. (Salaried would be 861,000.)"
+      - "Effective 1,290,000 / 5,100,000 = 25.29% -> 25.3."
+      - "Monthly (salary alone, salaried table): 466,000 / 12 = 38,833; take-home 261,167."
+    expected: {taxable_income: "4800000", salary_share: "75.00", table: non_salaried,
+               slab_tax: "1290000", total_tax: "1290000", effective_rate: "25.3",
+               monthly: {salary_tax: "38833", take_home: "261167"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: share-just-over-75
+    description: Salary just over 75% uses the salaried table on the whole taxable income.
+    inputs: {salary_monthly: "301000", rent_monthly: "125000"}
+    working:
+      - "Salary income 3,612,000; property income 1,200,000; taxable 4,812,000."
+      - "Share 75.06%: exceeds 75%: salaried row 6: 616,000 + 35% x 712,000 = 865,200."
+      - "Effective 865,200 / 5,112,000 = 16.92% -> 16.9."
+      - "Monthly: 3,612,000 on row 5 = 346,000 + 30% x 412,000 = 469,600; / 12 = 39,133.33 ->
+        39,133; take-home 261,867."
+    expected: {taxable_income: "4812000", salary_share: "75.06", table: salaried,
+               slab_tax: "865200", total_tax: "865200", effective_rate: "16.9",
+               monthly: {salary_tax: "39133", take_home: "261867"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- Bonus impact --------------------------------------------------------------------------
+
+  - id: bonus-moves-row
+    description: A bonus that moves salary from row 3 to row 4.
+    inputs: {salary_monthly: "150000", bonus: "600000"}
+    working:
+      - "Salary income 1,800,000 + 600,000 = 2,400,000: row 4: 116,000 + 23% x 200,000 = 162,000."
+      - "Without the bonus: 72,000; the bonus adds 90,000."
+      - "Effective 162,000 / 2,400,000 = 6.75% -> 6.8 (half up). Monthly 6,000; take-home 144,000."
+    expected: {taxable_income: "2400000", salary_share: "100.00", table: salaried,
+               slab_tax: "162000", total_tax: "162000", effective_rate: "6.8",
+               monthly: {salary_tax: "6000", take_home: "144000"}, bonus_impact: "90000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: bonus-flips-table
+    description: A bonus that lifts salary over 75%, switching to the salaried table.
+    inputs: {salary_monthly: "200000", bonus: "1300000", rent_monthly: "125000"}
+    working:
+      - "With the bonus: salary income 2,400,000 + 1,300,000 = 3,700,000; property income
+        1,200,000; taxable 4,900,000; share 75.51%: salaried row 6: 616,000 + 35% x 800,000 =
+        896,000."
+      - "Without it: salary income 2,400,000; taxable 3,600,000; share 66.67%: non-salaried row
+        5: 650,000 + 40% x 400,000 = 810,000. The bonus adds 86,000."
+      - "Effective 896,000 / 5,200,000 = 17.23% -> 17.2."
+      - "Monthly: 2,400,000 on row 4 = 162,000; / 12 = 13,500; take-home 186,500."
+    expected: {taxable_income: "4900000", salary_share: "75.51", table: salaried,
+               slab_tax: "896000", total_tax: "896000", effective_rate: "17.2",
+               monthly: {salary_tax: "13500", take_home: "186500"}, bonus_impact: "86000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: bonus-tips-to-salaried
+    description: "A Rs 1 bonus that tips salary over 75% LOWERS the tax (the 75% cliff)."
+    inputs: {salary_monthly: "300000", bonus: "1", rent_monthly: "125000"}
+    working:
+      - "Without the bonus: share-exactly-75, non-salaried, 1,290,000."
+      - "With it: salary income 3,600,001; taxable 4,800,001; 75% of that is 3,600,000.75, so
+        salary exceeds 75%: salaried row 6: 616,000 + 35% x 700,001 = 861,000.35 -> 861,000."
+      - "The bonus changes the total by 861,000 - 1,290,000 = -429,000: it lowers the tax. A cliff
+        in the Ordinance's two tables, for the tax practitioner to confirm."
+      - "Share 75.0000...% rounds to 75.00 (the step says just over 75%). Effective 861,000 /
+        5,100,001 = 16.88% -> 16.9. Monthly 38,833; take-home 261,167."
+    expected: {taxable_income: "4800001", salary_share: "75.00", table: salaried,
+               slab_tax: "861000", total_tax: "861000", effective_rate: "16.9",
+               monthly: {salary_tax: "38833", take_home: "261167"}, bonus_impact: "-429000"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-on-non-salaried-table-over-10m
+    description: "Salary income on the non-salaried table still has the 9% surcharge (s.4AB)."
+    inputs: {salary_monthly: "100000", rent_monthly: "1000000"}
+    working:
+      - "Salary income 1,200,000; rent 12,000,000, property income 9,600,000; taxable 10,800,000."
+      - "Share 11.11%: non-salaried row 6: 1,610,000 + 45% x 5,200,000 = 3,950,000."
+      - "Exceeds 10,000,000 and the person has income under the head Salary: 9% (not 10%) =
+        355,500. Total 4,305,500."
+      - "Effective 4,305,500 / 13,200,000 = 32.62% -> 32.6. Monthly: 1,200,000 on the salaried
+        table row 2 = 6,000; / 12 = 500; take-home 99,500."
+    expected: {taxable_income: "10800000", salary_share: "11.11", table: non_salaried,
+               slab_tax: "3950000", surcharge: "355500", total_tax: "4305500",
+               effective_rate: "32.6", monthly: {salary_tax: "500", take_home: "99500"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- Dividends and bank profit -------------------------------------------------------------
+
+  - id: dividends-filer
+    description: Dividends only, on the ATL.
+    inputs: {dividends: "1000000"}
+    working:
+      - "No taxable income: no table, slab tax 0. Dividend tax 15% x 1,000,000 = 150,000."
+      - "Effective 15.0. Deducted at source 15% = 150,000; not on the ATL 30% = 300,000."
+    expected: {taxable_income: "0", salary_share: null, table: null, slab_tax: "0",
+               dividend_tax: "150000", total_tax: "150000", effective_rate: "15.0",
+               monthly: null,
+               filer_comparison: [{source: dividends, your_rate: "15", other_rate: "30",
+                                   your_deduction: "150000", other_deduction: "300000",
+                                   difference: "150000"}]}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: dividends-non-filer
+    description: "Dividends only, not on the ATL: the same tax, a larger deduction."
+    inputs: {atl: false, dividends: "1000000"}
+    working:
+      - "Dividend tax is 15% for everyone (s.5): 150,000."
+      - "Deducted at source not on the ATL 30% = 300,000; on the ATL 15% = 150,000."
+    expected: {taxable_income: "0", salary_share: null, table: null, slab_tax: "0",
+               dividend_tax: "150000", total_tax: "150000", effective_rate: "15.0",
+               monthly: null,
+               filer_comparison: [{source: dividends, your_rate: "30", other_rate: "15",
+                                   your_deduction: "300000", other_deduction: "150000",
+                                   difference: "150000"}]}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: bank-profit-limit
+    description: Bank profit exactly 5,000,000 is still taxed under s.7B.
+    inputs: {bank_profit: "5000000"}
+    working:
+      - "5,000,000 does not exceed 5,000,000: profit tax 20% = 1,000,000. Effective 20.0."
+      - "Deducted 20% = 1,000,000; not on the ATL 40% = 2,000,000."
+    expected: {taxable_income: "0", salary_share: null, table: null, slab_tax: "0",
+               profit_tax: "1000000", total_tax: "1000000", effective_rate: "20.0",
+               monthly: null,
+               filer_comparison: [{source: bank_profit, your_rate: "20", other_rate: "40",
+                                   your_deduction: "1000000", other_deduction: "2000000",
+                                   difference: "1000000"}]}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: bank-profit-over-limit
+    description: Bank profit over 5,000,000 is refused (s.7B(3)(b)).
+    inputs: {bank_profit: "5000001"}
+    working:
+      - "Exceeds 5,000,000: s.7B doesn't apply; the calculator doesn't cover this. No figures."
+    expected: {blocked_reason: profit_over_limit}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: salary-rent-dividends-profit
+    description: Dividends and bank profit don't count in the 75% test.
+    inputs: {salary_monthly: "250000", rent_monthly: "31250", dividends: "2000000",
+             bank_profit: "1000000"}
+    working:
+      - "Salary income 3,000,000; rent 375,000, property income 300,000; taxable 3,300,000."
+      - "Share 3,000,000 / 3,300,000 = 90.91%: salaried row 5: 346,000 + 30% x 100,000 =
+        376,000. (Counting dividends and profit, 3,000,000 / 6,300,000 would be 47.6%: s.8(1)(a)
+        keeps them out.)"
+      - "Dividend tax 15% x 2,000,000 = 300,000; profit tax 20% x 1,000,000 = 200,000."
+      - "Total 376,000 + 300,000 + 200,000 = 876,000. Effective 876,000 / 6,375,000 = 13.74% ->
+        13.7. Monthly 25,000; take-home 225,000."
+    expected: {taxable_income: "3300000", salary_share: "90.91", table: salaried,
+               slab_tax: "376000", dividend_tax: "300000", profit_tax: "200000",
+               total_tax: "876000", effective_rate: "13.7",
+               monthly: {salary_tax: "25000", take_home: "225000"},
+               filer_comparison: [{source: dividends, your_rate: "15", other_rate: "30",
+                                   your_deduction: "300000", other_deduction: "600000",
+                                   difference: "300000"},
+                                  {source: bank_profit, your_rate: "20", other_rate: "40",
+                                   your_deduction: "200000", other_deduction: "400000",
+                                   difference: "200000"}]}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  # ---- Rounding and empty input --------------------------------------------------------------
+
+  - id: salary-with-paisa
+    description: A monthly salary with paisa is multiplied exactly; only final lines round.
+    inputs: {salary_monthly: "100000.50"}
+    working:
+      - "100,000.50 x 12 = 1,200,006.00: row 3: 6,000 + 11% x 6 = 6,000.66 -> 6,001."
+      - "Effective 6,001 / 1,200,006 = 0.50% -> 0.5."
+      - "Monthly 6,000.66 / 12 = 500.055 -> 500; take-home 100,000.50 - 500 = 99,500.50."
+    expected: {taxable_income: "1200006.00", salary_share: "100.00", table: salaried,
+               slab_tax: "6001", total_tax: "6001", effective_rate: "0.5",
+               monthly: {salary_tax: "500", take_home: "99500.50"}}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: fifty-paisa-rounds-up
+    description: Exactly 50 paisa rounds up to one rupee (s.219).
+    inputs: {salary_monthly: "50000", bonus: "50"}
+    working:
+      - "Salary income 600,000 + 50 = 600,050: row 2: 1% x 50 = 0.50 -> 1."
+      - "Without the bonus: 0; the bonus adds 1. Effective 1 / 600,050 = 0.0002% -> 0.0."
+      - "Monthly (600,000 alone): 0; take-home 50,000."
+    expected: {taxable_income: "600050", salary_share: "100.00", table: salaried,
+               slab_tax: "1", total_tax: "1", effective_rate: "0.0",
+               monthly: {salary_tax: "0", take_home: "50000"}, bonus_impact: "1"}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"
+
+  - id: nothing-entered
+    description: Every amount zero is refused.
+    inputs: {}
+    working:
+      - "No income above zero: no_income, no figures."
+    expected: {blocked_reason: no_income}
+    signed_off_by: "Saifullah Khan (provisional; to be revised at tax practitioner review)"
+    signed_off_date: "2026-11-14"

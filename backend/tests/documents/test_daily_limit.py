@@ -234,3 +234,42 @@ async def test_the_whole_app_stops_at_100_a_day(
     assert response.json() == {"detail": APP_LIMIT}
     assert not fake_extractor.calls
     assert not files_in(upload_dir)
+
+
+GOOGLE_BUSY = failed("Google's AI service is busy.", service_failed=True)
+
+
+async def test_an_upload_google_failed_to_answer_is_not_counted(
+    client: AsyncClient, db: AsyncSession, user_with_profile: User, fake_extractor: FakeExtractor
+) -> None:
+    """Fails if a try lost to Google's side (a 5xx, e.g. its 60-second 504, or no connection)
+    uses up one of the user's 10 (FR-017, amended 2026-11-13); the file stays, for Retry."""
+    fake_extractor.result = GOOGLE_BUSY
+
+    response = await upload(client, make_pdf())
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "failed"
+    assert await attempts(db, user_with_profile.id) == 0
+
+
+async def test_a_retry_google_failed_to_answer_is_not_counted(
+    client: AsyncClient, db: AsyncSession, user_with_profile: User, fake_extractor: FakeExtractor
+) -> None:
+    """Fails if retrying while Google is still busy keeps costing the user tries."""
+    fake_extractor.result = GOOGLE_BUSY
+    document_id = (await upload(client, make_pdf())).json()["id"]
+
+    assert await retry(client, document_id) == 200
+    assert await attempts(db, user_with_profile.id) == 0
+
+
+async def test_a_failure_of_the_document_itself_still_counts(
+    client: AsyncClient, db: AsyncSession, user_with_profile: User, fake_extractor: FakeExtractor
+) -> None:
+    """Fails if a failure Google answered (an unreadable file) stops counting: the AI was used."""
+    fake_extractor.result = failed("The AI service couldn't read this file.")
+
+    await upload(client, make_pdf())
+
+    assert await attempts(db, user_with_profile.id) == 1

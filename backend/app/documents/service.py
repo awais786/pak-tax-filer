@@ -30,6 +30,8 @@ from app.documents.models import (
 )
 from app.documents.storage import Storage
 from app.documents.uploads import CheckedFile
+from app.settings import get_settings
+from app.telemetry.ai import ai_call, record_refusal, record_usage
 
 # Reasons starting with this come from reading the printed value, not from a rule.
 UNREADABLE = "Couldn't read"
@@ -77,9 +79,11 @@ async def use_extraction(db: AsyncSession, user_id: uuid.UUID) -> ExtractionAtte
     recent = select(func.count()).select_from(ExtractionAttempt)
     recent = recent.where(ExtractionAttempt.attempted_at > since)
     if (await db.execute(recent)).scalar_one() >= APP_DAILY_EXTRACTIONS:
+        record_refusal("extraction", get_settings().extraction_model)
         raise DailyLimitReached(APP_LIMIT_REACHED)
     mine = recent.where(ExtractionAttempt.user_id == user_id)
     if (await db.execute(mine)).scalar_one() >= DAILY_EXTRACTIONS:
+        record_refusal("extraction", get_settings().extraction_model)
         raise DailyLimitReached(USER_LIMIT_REACHED)
     attempt = ExtractionAttempt(user_id=user_id, attempted_at=datetime.now(UTC))
     db.add(attempt)
@@ -137,13 +141,30 @@ async def create_document(  # pylint: disable=too-many-arguments  # all keyword-
 
 
 async def extract_document(
-    db: AsyncSession, document: Document, extractor: Extractor, content: bytes
+    db: AsyncSession,
+    document: Document,
+    extractor: Extractor,
+    content: bytes,
+    attempt: ExtractionAttempt | None = None,
 ) -> Document:
-    """Run extraction, normalise, apply the rules and save the fields (or the failure)."""
+    """Run extraction, normalise, apply the rules and save the fields (or the failure). When
+    Google's side failed (a 5xx or no connection), the attempt that counted this try is removed,
+    so the user isn't charged for it (FR-017, amended 2026-11-13)."""
     document.status = DocStatus.EXTRACTING
     await db.flush()
 
-    result = await extractor.extract(document.doc_type, content, document.media_type)
+    with ai_call("extraction", get_settings().extraction_model) as call:
+        result = await extractor.extract(document.doc_type, content, document.media_type)
+        record_usage(result.input_tokens, result.output_tokens)
+        if result.limit_reached:
+            call.outcome = "limit_reached"  # the free tier's limit (Google's 429)
+        elif result.wrong_type:
+            call.outcome = "check_failed"
+        elif result.failure_reason is not None:
+            call.outcome = "fallback"
+
+    if result.service_failed and attempt is not None:
+        await db.delete(attempt)
 
     document.model = result.model
     if result.failure_reason is not None:
@@ -382,12 +403,12 @@ async def retry_extraction(
     # Counted only now that the AI will be called, and committed first so neither the limit's
     # lock nor this row's is held during the call (002 review M2, M3); then the row is locked
     # again and rechecked, since an edit or delete could have come in between.
-    await use_extraction(db, document.user_id)
+    attempt = await use_extraction(db, document.user_id)
     await db.commit()
     await db.refresh(document, with_for_update=True)
     if document.status is not DocStatus.FAILED:
         raise DocumentLocked("Only a failed extraction can be retried.")
-    return await extract_document(db, document, extractor, content)
+    return await extract_document(db, document, extractor, content, attempt)
 
 
 async def delete_document(db: AsyncSession, document: Document) -> str:

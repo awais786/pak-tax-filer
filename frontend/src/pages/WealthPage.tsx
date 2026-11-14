@@ -9,6 +9,7 @@ import {
   getWealth,
   getWealthSummary,
   saveWealth,
+  wealthPdfUrl,
 } from "../api/wealth";
 import type {
   AutoFilledLine,
@@ -16,6 +17,7 @@ import type {
   Wealth,
   WealthResult,
 } from "../api/wealth";
+import { DownloadPdfButton } from "../components/DownloadPdfButton";
 import { MoneyInput } from "../components/MoneyInput";
 import { SummaryPanel } from "../components/SummaryPanel";
 import { useProfile } from "../profile/ProfileContext";
@@ -128,6 +130,8 @@ export function WealthPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Changes not yet saved: the PDF is of the saved statement, so it waits for them (008).
+  const [edited, setEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveAttempts, setSaveAttempts] = useState(0);
   // Each statement shown (loaded or saved) gets a new number, so its summary is asked for anew.
@@ -157,6 +161,7 @@ export function WealthPage() {
     setLoadError(null);
     setSaveError(null);
     setSaved(false);
+    setEdited(false);
   }
 
   useEffect(() => {
@@ -169,6 +174,7 @@ export function WealthPage() {
         if (current) {
           setWealth(loaded);
           setForm(toForm(loaded.statement));
+          setEdited(false);
           setVersion((n) => n + 1);
         }
       })
@@ -202,6 +208,7 @@ export function WealthPage() {
       setForm(toForm(result.statement));
       setVersion((n) => n + 1);
       setSaved(true);
+      setEdited(false);
     } catch (caught) {
       setSaveError(message(caught, "Couldn't save. Try again."));
     } finally {
@@ -212,6 +219,7 @@ export function WealthPage() {
 
   const update = (changes: Partial<Form>) => {
     setSaved(false);
+    setEdited(true);
     setForm((current) => (current ? { ...current, ...changes } : current));
   };
   const dates = statementDates(taxYear);
@@ -284,6 +292,7 @@ export function WealthPage() {
             label={wealth.label}
             taxYear={taxYear}
             version={version}
+            edited={edited}
           />
         </>
       )}
@@ -574,13 +583,25 @@ type ResultProps = {
   taxYear: string;
   /** Changes with every load and save, so the summary is asked for again. */
   version: number;
+  /** The form has changes not yet saved (the PDF is of the saved statement). */
+  edited: boolean;
 };
 
-function Result({ result, label, taxYear, version }: ResultProps) {
+function Result({ result, label, taxYear, version, edited }: ResultProps) {
   return (
     <section aria-labelledby="result-heading" className="result">
       <h2 id="result-heading">Result</h2>
       <p className="notice">{label}</p>
+      <DownloadPdfButton
+        url={wealthPdfUrl(taxYear)}
+        disabledReason={
+          result.not_ready_reason !== null
+            ? "No PDF until your statement can be reconciled."
+            : edited
+              ? "Save your changes first: the PDF is of your saved statement."
+              : null
+        }
+      />
       {result.message && <p className="result-message">{result.message}</p>}
       {result.not_ready_reason === null && (
         <>

@@ -1,0 +1,9 @@
+{
+  "name": "pak-tax-filer-e2e",
+  "private": true,
+  "description": "End-to-end tests: the real app in a real browser, with a fake Gemini (README.md).",
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

@@ -199,3 +199,16 @@ def test_the_workflow_model_and_effort_can_be_set_and_effort_is_checked() -> Non
     assert (settings.workflow_model, settings.workflow_effort) == ("gemini-x", "low")
     with pytest.raises(ValueError, match="WORKFLOW_EFFORT"):
         load_settings({**env, "WORKFLOW_EFFORT": "extreme"})
+
+
+# Feature 008: where telemetry goes (research R1; logs only, for developers).
+
+
+def test_telemetry_goes_to_the_logs_by_default_and_can_be_switched_off() -> None:
+    """Fails if telemetry has no default, or a typo in OTEL_EXPORTER silently loses it."""
+    env = {"DATABASE_URL": "postgresql+asyncpg://x"}
+
+    assert load_settings(env).otel_exporter == "console"
+    assert load_settings({**env, "OTEL_EXPORTER": " NONE "}).otel_exporter == "none"
+    with pytest.raises(ValueError, match="OTEL_EXPORTER"):
+        load_settings({**env, "OTEL_EXPORTER": "jaeger"})

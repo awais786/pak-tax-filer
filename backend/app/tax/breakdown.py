@@ -45,9 +45,16 @@ def balance_words(rounded: Decimal, overpaid: str) -> str:
     return "nothing to pay"
 
 
-def salary_tax(band: Band, taxable: Decimal, exact: Decimal, rounded: Decimal) -> str:
+def salary_tax(
+    band: Band,
+    taxable: Decimal,
+    exact: Decimal,
+    rounded: Decimal,
+    lead: str = "Salary tax: taxable salary",
+) -> str:
     """'Salary tax: taxable salary Rs 1,800,000 falls in the Rs 1,200,001 to Rs 2,200,000 band:
-    Rs 6,000 + 11% of Rs 600,000 = Rs 72,000'."""
+    Rs 6,000 + 11% of Rs 600,000 = Rs 72,000'. Feature 010's calculator passes its own `lead`
+    ("Tax on taxable income"), since its income isn't only salary."""
     if band.upper is None:
         position = f"exceeds {money(band.lower)}"
     elif band.lower == 0:
@@ -63,7 +70,4 @@ def salary_tax(band: Band, taxable: Decimal, exact: Decimal, rounded: Decimal) -
         formula = (
             f"{money(band.fixed)} + {percent(band.rate)} of {money(over)} above {money(band.lower)}"
         )
-    return (
-        f"Salary tax: taxable salary {money(taxable)} {position}: {formula} "
-        f"{equals(exact, rounded)}"
-    )
+    return f"{lead} {money(taxable)} {position}: {formula} {equals(exact, rounded)}"

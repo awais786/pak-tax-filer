@@ -1,7 +1,10 @@
-"""GET /api/tax/{tax_year} and its summary (feature 004, task T012; contracts/tax-api.md, R6).
+"""GET /api/tax/{tax_year} and its summary (feature 004, task T012; contracts/tax-api.md, R6),
+and POST /api/tax/calculator (feature 010, task T012; its contracts/calculator-api.md).
 
 GET because nothing changes on the server: the result is recalculated from the user's confirmed
-certificates and profile on every request. Money is returned as strings (docs/api-conventions.md).
+certificates and profile on every request. The calculator is a POST only because its amounts
+are a body (kept out of URLs and logs); it stores nothing either. Money is returned as strings
+(docs/api-conventions.md).
 """
 
 from decimal import Decimal
@@ -11,10 +14,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import current_user
+from app.auth.dependencies import current_user, require_json
 from app.auth.models import User
 from app.db import get_db
+from app.profile.dependencies import require_profile
+from app.profile.models import TaxpayerProfile
 from app.settings import get_settings
+from app.tax.calculator import calculate_simple
+from app.tax.calculator_schemas import CalculatorIn, CalculatorOut, calculator_out
 from app.tax.engine import TaxResult, calculate
 from app.tax.rates import rates_for
 from app.tax.service import BLOCKED_MESSAGES, tax_inputs
@@ -124,3 +131,18 @@ async def read_tax_summary(
     """A short summary of the same result, checked: no summary unless every number in it is in
     the breakdown (FR-011)."""
     return SummaryOut(summary=await verified_summary(await _result(db, user, tax_year), summariser))
+
+
+@router.post("/calculator", dependencies=[Depends(require_json)])
+async def calculate_tax(
+    body: CalculatorIn,
+    profile: Annotated[TaxpayerProfile, Depends(require_profile)],
+) -> CalculatorOut:
+    """The tax on typed amounts for the profile's tax year and ATL status, every line
+    explained; or why the calculator can't answer. Nothing is stored (feature 010, FR-003)."""
+    try:
+        rates = rates_for(profile.tax_year)
+    except KeyError as missing:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No rates for that tax year.") from missing
+    result = calculate_simple(body.inputs(profile.tax_year, profile.on_atl), rates)
+    return calculator_out(result, LABEL, profile.on_atl)

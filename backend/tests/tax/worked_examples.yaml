@@ -41,6 +41,9 @@
 #   row 5: exceeds 3,200,000, not 4,100,000            -> 346,000 + 30% over 3,200,000
 #   row 6: exceeds 4,100,000                           -> 616,000 + 35% over 4,100,000
 
+# (Page numbers below are as signed. Feature 010 found they are printed page + 1, not the page in
+# the FBR file; ty2026.py now cites "p. / PDF p." instead: specs/010-income-tax-engine/research.md
+# R8. Figures unchanged.)
 # SIGNED OFF 2026-11-09 by Saifullah Khan, against the Ordinance (FBR PDF, amended up to
 # 31.07.2025): the salaried table (PDF page 493; all six rows), the 9% salaried surcharge above
 # Rs 10 million (s.4AB, page 34), tax on the gross profit on debt (s.7B(2), page 41) and its

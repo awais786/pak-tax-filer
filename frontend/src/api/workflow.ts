@@ -62,3 +62,6 @@ export const backRun = () =>
 export const getResult = () => apiFetch<WorkflowResult>("/api/workflow/result");
 export const markDone = () =>
   apiFetch<Run>("/api/workflow/done", { method: "POST" });
+
+/** The guided run's approved result as a PDF (feature 008): a download address. */
+export const WORKFLOW_PDF_URL = "/api/workflow/result/pdf";

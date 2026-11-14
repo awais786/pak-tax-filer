@@ -36,6 +36,15 @@ services:
       # The private Cloud Storage bucket for uploads (feature 003, FR-018), reached with the
       # VM's own Google identity, so no key. Empty keeps uploads on the disk volume below.
       UPLOAD_BUCKET: ${UPLOAD_BUCKET:-}
+      # Telemetry spans go to these logs (feature 008); "none" turns them off.
+      OTEL_EXPORTER: ${OTEL_EXPORTER:-console}
+    # The logs are capped (3 files of 10 MB, the oldest dropped): with telemetry each request
+    # writes its spans here, and Docker otherwise keeps every line on the VM's 30 GB disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       db:
         condition: service_healthy

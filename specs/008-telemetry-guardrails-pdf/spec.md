@@ -11,6 +11,9 @@ eval-accuracy gate), PDF export with the validation-status banner." CI is in fea
 eval gates in 003 and 006. Source design:
 `docs/superpowers/specs/2026-11-04-telemetry-guardrails-pdf-design.md`.
 
+**Amended 2026-11-12** (design addendum): the stack as built (Gemini; 006 and 007), telemetry to
+the logs only and for developers only, the PDF library confirmed by measurement.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Export a result as a labelled PDF (Priority: P1)
@@ -140,11 +143,14 @@ recorded data finds no prompt, reply, figure, email, user id or document id.
 - **FR-010**: The system MUST record each backend request's route without ids, duration and
   status, and database call timings.
 - **FR-011**: The system MUST record each AI call's feature, model, duration, tokens and outcome
-  (passed, check failed and replaced, timed out, fallback).
+  (passed, check failed and replaced, timed out, fallback, question limit reached), for every AI
+  use: extraction, both summaries, the assistant's answers, embeddings and the guided run's
+  agents (amended 2026-11-12).
 - **FR-012**: Recorded data MUST NOT contain prompts, replies, document contents, figures, emails,
   user or session ids, raw paths with ids, or database query text (Principle V).
-- **FR-013**: Recorded data MUST go to the logs by default and to a local viewer once one is
-  approved and switched on by a setting.
+- **FR-013** (amended 2026-11-12): Recorded data MUST go to the backend logs; it is for
+  developers only, with no page in the app. A viewer may be added later by a setting, without
+  code changes.
 - **FR-014**: The feature MUST NOT include usage analytics, alerting, hosted dashboards, filing
   forms, or emailing or storing PDFs.
 
@@ -175,6 +181,6 @@ recorded data finds no prompt, reply, figure, email, user id or document id.
 - Builds on 004 (tax result, breakdown, label), 005 (wealth statement, provisional notes), 003
   (rule-check warnings), 006 (assistant, MCP tools), 007 (workflow approval) and 002 (profile:
   tax year).
-- The local viewer is a new component needing the lead's approval (constitution); until then,
-  logs are used and nothing is blocked.
+- No viewer is part of this feature (amended 2026-11-12): telemetry goes to the logs; a viewer
+  such as Jaeger would be a new component needing the lead's approval (constitution).
 - Synthetic data only (Principle V).

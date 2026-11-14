@@ -7,6 +7,7 @@ import {
   ProfileFrame,
 } from "./components/AppFrame";
 import { AskPage } from "./pages/AskPage";
+import { CalculatorPage } from "./pages/CalculatorPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -55,6 +56,7 @@ export function AppRoutes() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/:id" element={<ReviewPage />} />
         <Route path="/tax" element={<TaxPage />} />
+        <Route path="/calculator" element={<CalculatorPage />} />
         <Route path="/wealth" element={<WealthPage />} />
         <Route path="/ask" element={<AskPage />} />
         <Route path="/workflow" element={<WorkflowPage />} />

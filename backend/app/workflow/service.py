@@ -223,7 +223,9 @@ async def mark_done(ctx: Context) -> WorkflowRun:
     return run
 
 
-async def result(ctx: Context) -> tuple[WorkflowRun, TaxResult] | None:
+async def result(
+    ctx: Context,
+) -> tuple[WorkflowRun, TaxResult, list[ConfirmedDocument]] | None:
     """004's result for the run's inputs, or None without an approval for exactly them. The
     check and the calculation use one read of the certificates (backend review H1). Never
     stored: recalculated from the confirmed certificates on every request (as 004)."""
@@ -233,7 +235,7 @@ async def result(ctx: Context) -> tuple[WorkflowRun, TaxResult] | None:
     ):
         return None
     inputs = tax_inputs_from(documents, ctx.profile.tax_year, ctx.profile.on_atl)
-    return run, calculate(inputs, rates_for(ctx.profile.tax_year))
+    return run, calculate(inputs, rates_for(ctx.profile.tax_year)), documents
 
 
 async def _locked(ctx: Context) -> WorkflowRun | None:

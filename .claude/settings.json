@@ -87,6 +87,18 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/contracts-gate.sh",
+            "timeout": 120,
+            "statusMessage": "Checking the feature's contracts..."
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [

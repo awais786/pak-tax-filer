@@ -4,6 +4,7 @@ import { NavLink, useLocation } from "react-router";
 import { LogoutButton } from "./LogoutButton";
 import {
   AskIcon,
+  CalculatorIcon,
   DocumentsIcon,
   FilingIcon,
   GuidedIcon,
@@ -24,6 +25,7 @@ const HOME: Page = { to: "/", label: "Home", icon: <HomeIcon /> };
 const FILING: Page[] = [
   { to: "/documents", label: "Documents", icon: <DocumentsIcon /> },
   { to: "/tax", label: "Tax", icon: <TaxIcon /> },
+  { to: "/calculator", label: "Calculator", icon: <CalculatorIcon /> },
   { to: "/wealth", label: "Wealth statement", icon: <WealthIcon /> },
   { to: "/workflow", label: "Guided filing", icon: <GuidedIcon /> },
 ];

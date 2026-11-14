@@ -1,0 +1,38 @@
+# Machine-checkable subset of calculator-api.md (feature 010), checked by
+# scripts/validate_contracts.py against the app's OpenAPI schema. The Markdown
+# stays the full contract; change both together (docs/contracts.md).
+openapi: 3.1.0
+info:
+  title: Feature 010 contract
+  version: 1.0.0
+paths:
+  /api/tax/calculator:
+    post:
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - tax_year
+                - blocked_reason
+                - message
+                - incomes
+                - taxable_income
+                - salary_share
+                - table
+                - slab_tax
+                - surcharge
+                - dividend_tax
+                - profit_tax
+                - total_tax
+                - effective_rate
+                - monthly
+                - bonus_impact
+                - filer_comparison
+                - on_atl
+                - steps
+                - not_covered
+                - label

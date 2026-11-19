@@ -106,6 +106,7 @@ jobs:
       - name: Contract check
         env:
           OTEL_EXPORTER: none
+          TELEMETRY_STORE: "off"
         run: uv run --project backend python scripts/validate_contracts.py --all
 
   # The real app in a real browser (Playwright, Chromium), with a fake Gemini so no test reaches
@@ -128,6 +129,8 @@ jobs:
           # curl itself retries (3 minutes at most), and a backend that never starts fails here.
           curl -sf --retry 60 --retry-delay 3 --retry-connrefused --retry-all-errors http://localhost:18000/health >/dev/null || { echo "The backend never became healthy."; exit 1; }
           $COMPOSE exec -T backend alembic upgrade head
+          # The admin admin.spec.ts signs in as (feature 011; synthetic, this stack only).
+          printf 'e2e-admin-password-not-real\ne2e-admin-password-not-real\n' | $COMPOSE exec -T backend python -m app.cli create-admin --email e2e-admin@example.com
           curl -sf --retry 60 --retry-delay 3 --retry-connrefused --retry-all-errors http://localhost:15173/ >/dev/null || { echo "The frontend never started."; exit 1; }
       - name: Install Playwright and Chromium
         working-directory: e2e

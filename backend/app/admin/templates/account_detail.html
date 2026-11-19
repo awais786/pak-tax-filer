@@ -1,0 +1,35 @@
+{% extends "detail.html" %}
+{% block detail_after %}
+{% set overview = request.state.overview %}
+{% if overview %}
+<div class="card mt-3">
+  <div class="card-header"><h3 class="card-title">Progress</h3></div>
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-4">Tax year</dt><dd class="col-8">{{ overview.tax_year or "No profile yet" }}</dd>
+      <dt class="col-4">ATL status</dt>
+      <dd class="col-8">{% if overview.on_atl is none %}Not answered{% elif overview.on_atl %}On the ATL{% else %}Not on the ATL{% endif %}</dd>
+      <dt class="col-4">Guided filing</dt><dd class="col-8">{{ overview.guided_step or "Not started" }}</dd>
+    </dl>
+    <h4>Documents</h4>
+    {% if overview.documents %}
+    <table class="table table-sm">
+      <thead><tr><th>Type</th><th>Status</th><th>Tax year</th><th>Uploaded</th></tr></thead>
+      <tbody>
+      {% for d in overview.documents %}
+        <tr><td>{{ d.doc_type }}</td><td>{{ d.status }}</td><td>{{ d.tax_year }}</td><td>{{ d.uploaded_at.strftime("%Y-%m-%d %H:%M") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p>No documents.</p>{% endif %}
+    <h4>Tax result</h4>
+    {% if overview.tax.blocked_reason %}
+      <p>Not calculated: {{ overview.tax.message }}</p>
+    {% else %}
+      <p>{{ overview.tax.summary }}</p>
+    {% endif %}
+    <p class="text-secondary">{{ overview.tax.label }}</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -88,6 +88,17 @@ held to a measured bar. Both need to be checked automatically, every time.
   - a side calculator (amended 2026-11-14, feature 010; the lead asked for "Simple"): typed
     salary, bonus, rent, dividends and bank profit, each under its legal treatment, with the 75%
     salary test, giving the tax due. Nothing typed is stored.
+- An internal admin area (amended 2026-11-17, feature 011; asked by the lead) for the team
+  running the app, not for customers or practitioners:
+  - admin accounts are staff-only, created from the command line, and can't use the taxpayer app;
+  - admins see accounts, documents, results, guided runs, the law library and saved telemetry,
+    and can disable or re-enable an account, delete an account, sign a user out everywhere and
+    reset a user's daily document-reading limit. Nothing else is editable: admins MUST NOT change
+    a user's figures or confirm a document for them (Principle III);
+  - every admin action and every opening of one account's details MUST be recorded in an audit
+    log that nothing edits or deletes;
+  - telemetry MAY be saved in the app's database with only the content-free details feature 008
+    allows, kept 30 days.
 - Anything not covered (tax already deducted and the balance, other incomes, deductions and
   credits, other tax years) MUST be listed as not covered, never guessed.
 - The MCP server exposes exactly three tools: `search_tax_documents`,
@@ -145,4 +156,4 @@ worth more than a wide scope done approximately.
   MUST either be fixed or be recorded in Complexity Tracking with justification and lead
   approval. Runtime development guidance lives in `CLAUDE.md`.
 
-**Version**: 1.3.0 | **Ratified**: 2026-11-02 | **Last Amended**: 2026-11-16
+**Version**: 1.4.0 | **Ratified**: 2026-11-02 | **Last Amended**: 2026-11-17

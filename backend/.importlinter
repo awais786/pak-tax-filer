@@ -20,3 +20,19 @@ forbidden_modules =
     google
     app.documents.extraction
     app.rag
+
+; Feature 011 (research R14): the admin area never calls a model. Direct imports only: it reads
+; confirmed documents through app.documents.service (Principle III), which imports the extraction
+; client, and the Ask limit from app.rag.service. tests/guardrails/test_admin_no_ai.py proves it
+; at run time.
+[importlinter:contract:no-ai-in-admin]
+name = The admin area never imports a model client directly
+type = forbidden
+source_modules =
+    app.admin
+forbidden_modules =
+    google
+    app.documents.extraction
+    app.rag.answer
+    app.rag.embed
+allow_indirect_imports = True

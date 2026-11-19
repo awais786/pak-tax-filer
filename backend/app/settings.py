@@ -43,6 +43,12 @@ class Settings:  # pylint: disable=too-many-instance-attributes  # one field per
     ask_daily_limit: int = 200
     # Feature 008, research R1: telemetry to the backend logs ("console") or nowhere ("none").
     otel_exporter: str = "console"
+    # Feature 011, research R3: signs the admin area's CSRF and flash cookies. Optional: without
+    # it the library makes a start-up key (one backend process). Kept out of repr.
+    admin_secret_key: str | None = field(default=None, repr=False)
+    # Feature 011, research R9: save request and AI-call telemetry in the database (on unless
+    # TELEMETRY_STORE=off; tests set it off).
+    telemetry_store: bool = True
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
@@ -73,6 +79,8 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         answer_effort=_effort(environ, "ANSWER_EFFORT", default="minimal"),
         ask_daily_limit=_positive_int(environ, "ASK_DAILY_LIMIT", default=200),
         otel_exporter=otel_exporter(environ),
+        admin_secret_key=admin_secret_key(environ),
+        telemetry_store=telemetry_store(environ),
     )
 
 
@@ -83,6 +91,21 @@ def otel_exporter(environ: Mapping[str, str]) -> str:
     if exporter not in ("console", "none"):
         raise ValueError(f"OTEL_EXPORTER must be console or none, not {exporter!r}.")
     return exporter
+
+
+def admin_secret_key(environ: Mapping[str, str]) -> str | None:
+    """The admin area's signing key, or None (feature 011, research R3). Read on its own, so
+    mounting the admin area when the app is imported needs no DATABASE_URL."""
+    return environ.get("ADMIN_SECRET_KEY", "").strip() or None
+
+
+def telemetry_store(environ: Mapping[str, str]) -> bool:
+    """Whether telemetry is saved in the database (feature 011): `on` (default) or `off`. Read on
+    its own, like otel_exporter, so the telemetry setup needs no DATABASE_URL."""
+    raw = environ.get("TELEMETRY_STORE", "on").strip().lower()
+    if raw not in ("on", "off"):
+        raise ValueError(f"TELEMETRY_STORE must be on or off, not {raw!r}.")
+    return raw == "on"
 
 
 def _positive_int(environ: Mapping[str, str], name: str, default: int) -> int:

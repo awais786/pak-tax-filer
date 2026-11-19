@@ -10,6 +10,8 @@ every pull request and every push to `main`; if a guardrail breaks, CI fails.
 | [`test_principle_1.py`](test_principle_1.py) | I: deterministic tax math | Every AI client answers with made-up numbers; the tax, wealth and guided results still equal the signed-off worked examples, and the made-up numbers are never shown. No AI summary route exists, and the code-written `summary` states only amounts the result holds. |
 | [`test_principle_3.py`](test_principle_3.py) | III: human confirmation | With one confirmed and one unconfirmed salary certificate, the tax page, the wealth statement, the MCP tool and the guided gate count only the confirmed one; the guided result and its PDF need an approval. |
 | [`test_principle_4.py`](test_principle_4.py) | IV: honest, labelled output | The assistant's answers are cited and number-checked (a "10m" no passage has is refused); out-of-corpus and Urdu questions are refused; the guided run's law is real corpus passages, each cited; every result and every page of every PDF carries the label. |
+| [`test_admin_no_ai.py`](test_admin_no_ai.py) | I (feature 011) | With Google's client made to fail on creation, every admin page and all four account actions still work: the admin area never calls a model. The `.importlinter` contract `no-ai-in-admin` bans its direct imports of model clients. |
+| [`test_admin_no_secrets.py`](test_admin_no_secrets.py) | Security (feature 011) | No admin page carries a password hash, a session or access token, or their hashes. |
 
 ## Related tests elsewhere
 

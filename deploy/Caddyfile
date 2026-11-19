@@ -9,6 +9,11 @@
 		reverse_proxy backend:8000
 	}
 
+	# The internal admin area: server-rendered pages from the backend (feature 011, research R11).
+	handle /admin /admin/* {
+		reverse_proxy backend:8000
+	}
+
 	# The React app: unknown paths get index.html, and the router shows the page.
 	handle {
 		root * /srv

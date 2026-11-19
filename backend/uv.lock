@@ -1153,6 +1153,15 @@ wheels = [
 ]
 
 [[package]]
+name = "itsdangerous"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/cb/8ac0172223afbccb63986cc25049b154ecfb5e85932587206f42317be31d/itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173", size = 54410, upload-time = "2024-04-16T21:28:15.614Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef", size = 16234, upload-time = "2024-04-16T21:28:14.499Z" },
+]
+
+[[package]]
 name = "jinja2"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1635,6 +1644,7 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-multipart" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "starlette-admin" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "weasyprint" },
 ]
@@ -1668,6 +1678,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=6.21.4" },
     { name = "python-multipart", specifier = ">=0.0.33" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.8" },
+    { name = "starlette-admin", specifier = ">=1.0.3,<2" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
     { name = "weasyprint", specifier = ">=70.0" },
 ]
@@ -2369,6 +2380,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/48/bb/3d8757f21e9a53d9035c9eb039a777047139a16bfdbedfc7a58241c3d914/starlette-1.10.0.tar.gz", hash = "sha256:b8399098d4c1e3522734f7235dc79b1fc967f96cf139c81e0fa30479e0685f9b", size = 2734356, upload-time = "2026-10-24T15:04:12.342Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/2e/947cfe02def9371c07cd5bf5b6b61c829e9aecb9904db02a66cfafbc1eec/starlette-1.10.0-py3-none-any.whl", hash = "sha256:478c0ab3b4ced6e82719849c118fa406f0278a3499c1a898cd15cd31bdc38ce4", size = 80571, upload-time = "2026-10-24T15:04:10.371Z" },
+]
+
+[[package]]
+name = "starlette-admin"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "itsdangerous" },
+    { name = "jinja2" },
+    { name = "python-multipart" },
+    { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/a4/371bcdf59c3863e0a780a8c619de722ff2830832d9c5a790af36bfb3532c/starlette_admin-1.0.3.tar.gz", hash = "sha256:d215614b85bcccdf57c02b9a3c0c64e21062b8166ec683f2636dfedc6f6ded76", size = 1260652, upload-time = "2026-10-24T08:44:50.715Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/13/37097152b35ac8bab1ada12477eb4212d8f707ecd52720b73bc0f40326e0/starlette_admin-1.0.3-py3-none-any.whl", hash = "sha256:c240c333afed8e6844e3a889dda177818043619d95aeb526052908671aadf7aa", size = 1388037, upload-time = "2026-10-24T08:44:49.197Z" },
 ]
 
 [[package]]

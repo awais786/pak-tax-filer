@@ -87,6 +87,8 @@ async def owner_of(db: AsyncSession, token: str | None) -> User | None:
     if row is None:
         return None
     stored, user = row
+    if not user.can_use_app:  # an admin's or a disabled account's token (feature 011, FR-002)
+        return None
     stored.last_used_at = now
     await db.flush()
     return user

@@ -184,14 +184,6 @@ test("without a confirmed salary certificate it links to documents", async () =>
 
 test.each([
   ["profit_over_limit", "Bank profit over Rs 5,000,000 isn't supported yet."],
-  [
-    "salary_share_ambiguous",
-    "Your situation needs a tax practitioner: salary.",
-  ],
-  [
-    "surcharge_ambiguous",
-    "Your situation needs a tax practitioner: surcharge.",
-  ],
 ])("a %s refusal shows the server's message", async (reason, message) => {
   showTax(blocked(reason, message));
   renderApp("/tax");

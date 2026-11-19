@@ -25,13 +25,14 @@
 #   needs confirmation"), and the profit balance counts only the withholding up to the tax.
 #   non_atl_extra_withheld is null for users on the ATL.
 # - Salary and profit balances are never added together (FR-005).
-# - Blocked cases (provisional rules 1 and 3, and missing inputs) give a blocked_reason and no
-#   figures at all. They are checked in this order: needs_atl_answer,
-#   no_confirmed_salary_certificate, profit_over_limit, salary_share_ambiguous,
-#   surcharge_ambiguous.
-# - Taxable income = summed taxable salary + summed bank profit. The salaried table applies
-#   where salary EXCEEDS 75% of taxable income; this is checked with and without the bank
-#   profit, and so is the Rs 10 million surcharge limit (provisional rule 3).
+# - Blocked cases (provisional rule 1, and missing inputs) give a blocked_reason and no figures
+#   at all. They are checked in this order: needs_atl_answer, no_confirmed_salary_certificate,
+#   profit_over_limit.
+# - Bank profit taxed under s.7B is a final tax and not part of taxable income (s.8(1)(a);
+#   feature 010, research R5). So taxable income = summed taxable salary: the salaried table
+#   always applies (salary is all of it), and the Rs 10 million surcharge limit is checked on
+#   salary alone. (Amended 2026-11-17: provisional rule 3 refused when bank profit could change
+#   either test; s.8(1)(a) answers it, so those cases are now calculated.)
 #
 # Rows of the salaried table (First Schedule, Part I, Division I, clause (2)):
 #   row 1: does not exceed 600,000                     -> 0
@@ -51,7 +52,8 @@
 # rounding (s.219, page 437); and he agreed with three readings: (A) each balance is rounded from
 # the unrounded tax figures, (B) exactly 75% is not "more than 75%", so it is blocked, (C) a
 # non-ATL user's withholding above the profit tax is "to be confirmed", never a refund. The
-# arithmetic was checked with a calculator when the examples were written.
+# arithmetic was checked with a calculator when the examples were written. (B) no longer arises
+# since 2026-11-17: with bank profit outside taxable income, salary is all of it.
 
 tax_year: "2025-26"
 
@@ -446,36 +448,42 @@ examples:
     signed_off_by: "Saifullah Khan"
     signed_off_date: "2026-11-09"
 
-  - id: blocked-salary-share-ambiguous
-    description: Salary is exactly 75% of taxable income with the profit included (not "more
-      than"), but 100% without it (provisional rule 3).
+  - id: bank-profit-outside-the-salary-share
+    description: Bank profit a third of salary. It is a final tax outside taxable income
+      (s.8(1)(a)), so the 75% test sees salary alone and the salaried table applies. (Until
+      2026-11-17 this was refused as salary_share_ambiguous, provisional rule 3.)
     inputs:
       atl: true
       salary_certificates: [{taxable_salary: "1200000", tax_deducted: "6000"}]
       bank_certificates: [{profit_amount: "400000", tax_withheld: "80000"}]
     working:
-      - "With profit: taxable income 1,600,000; 75% of it is 1,200,000; salary 1,200,000 does
-        not exceed it, so the salaried table would not apply."
-      - "Without profit: salary is 100% of taxable income, so it would apply."
-      - "The two disagree: salary_share_ambiguous, no figures."
-    expected: {blocked_reason: salary_share_ambiguous, salary_tax: null, surcharge: null,
-               profit_tax: null, salary_balance: null, profit_balance: null,
-               non_atl_extra_withheld: null}
+      - "Taxable income is salary alone, 1,200,000 (bank profit is final, s.8(1)(a)): salary
+        is 100% of it, so the salaried table applies."
+      - "Salary tax: row 2, 1% of (1,200,000 - 600,000) = 6,000."
+      - "Surcharge: 1,200,000 does not exceed 10,000,000, so none."
+      - "Salary balance: 6,000 + 0 - 6,000 = 0."
+      - "Profit tax: 20% of 400,000 = 80,000; balance 80,000 - 80,000 = 0."
+    expected: {blocked_reason: null, salary_tax: "6000", surcharge: "0", profit_tax: "80000",
+               salary_balance: "0", profit_balance: "0", non_atl_extra_withheld: null}
     signed_off_by: "Saifullah Khan"
-    signed_off_date: "2026-11-09"
+    signed_off_date: "2026-11-17"
 
-  - id: blocked-surcharge-ambiguous
-    description: Over 10,000,000 only when the profit is counted (provisional rule 3).
+  - id: bank-profit-outside-the-surcharge-limit
+    description: Salary just under 10,000,000; with the bank profit added it would be over. The
+      limit is on taxable income, which excludes the final-tax bank profit (s.8(1)(a)), so no
+      surcharge. (Until 2026-11-17 this was refused as surcharge_ambiguous, provisional rule 3.)
     inputs:
       atl: true
       salary_certificates: [{taxable_salary: "9900000", tax_deducted: "2400000"}]
       bank_certificates: [{profit_amount: "200000", tax_withheld: "40000"}]
     working:
-      - "Salary share: 9,900,000 of 10,100,000 is 98%, over 75% both ways (no ambiguity there)."
-      - "Without profit: 9,900,000 does not exceed 10,000,000, no surcharge. With profit:
-        10,100,000 exceeds it, surcharge. They disagree: surcharge_ambiguous, no figures."
-    expected: {blocked_reason: surcharge_ambiguous, salary_tax: null, surcharge: null,
-               profit_tax: null, salary_balance: null, profit_balance: null,
-               non_atl_extra_withheld: null}
+      - "Taxable income is salary alone, 9,900,000: the salaried table applies."
+      - "Salary tax: row 6, 616,000 + 35% of (9,900,000 - 4,100,000) = 616,000 + 2,030,000 =
+        2,646,000."
+      - "Surcharge: 9,900,000 does not exceed 10,000,000, so none."
+      - "Salary balance: 2,646,000 + 0 - 2,400,000 = 246,000 payable."
+      - "Profit tax: 20% of 200,000 = 40,000; balance 40,000 - 40,000 = 0."
+    expected: {blocked_reason: null, salary_tax: "2646000", surcharge: "0", profit_tax: "40000",
+               salary_balance: "246000", profit_balance: "0", non_atl_extra_withheld: null}
     signed_off_by: "Saifullah Khan"
-    signed_off_date: "2026-11-09"
+    signed_off_date: "2026-11-17"

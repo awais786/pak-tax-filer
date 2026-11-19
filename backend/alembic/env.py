@@ -19,11 +19,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Importing a models module registers its tables on Base.metadata.
+from app.admin import models as _admin_models  # pylint: disable=unused-import
 from app.auth import models as _auth_models  # pylint: disable=unused-import
 from app.documents import models as _documents_models  # pylint: disable=unused-import
 from app.profile import models as _profile_models  # pylint: disable=unused-import
 from app.rag import models as _rag_models  # pylint: disable=unused-import
 from app.tokens import models as _tokens_models  # pylint: disable=unused-import
+from app.telemetry import models as _telemetry_models  # pylint: disable=unused-import
 from app.wealth import models as _wealth_models  # pylint: disable=unused-import
 from app.workflow import models as _workflow_models  # pylint: disable=unused-import
 from app.db import Base

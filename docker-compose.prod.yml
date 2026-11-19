@@ -38,6 +38,11 @@ services:
       UPLOAD_BUCKET: ${UPLOAD_BUCKET:-}
       # Telemetry spans go to these logs (feature 008); "none" turns them off.
       OTEL_EXPORTER: ${OTEL_EXPORTER:-console}
+      # Signs the admin area's form and flash cookies (feature 011). Optional: without it the
+      # backend makes a new key at each start, and admin forms open across a restart need a reload.
+      ADMIN_SECRET_KEY: ${ADMIN_SECRET_KEY:-}
+      # Request and AI-call telemetry saved for the admin area's Telemetry page, 30 days (feature 011).
+      TELEMETRY_STORE: ${TELEMETRY_STORE:-on}
     # The logs are capped (3 files of 10 MB, the oldest dropped): with telemetry each request
     # writes its spans here, and Docker otherwise keeps every line on the VM's 30 GB disk.
     logging:

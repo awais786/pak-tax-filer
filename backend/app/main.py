@@ -1,11 +1,16 @@
 """FastAPI application entry point (uvicorn app.main:app)."""
 
+import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.admin.site import AppSessions, build_admin
 from app.auth.router import router as auth_router
 from app.documents.router import router as documents_router
 from app.profile.router import router as profile_router
@@ -13,10 +18,28 @@ from app.rag.router import router as ask_router
 from app.reports.router import router as reports_router
 from app.workflow.router import router as workflow_router
 from app.tax.router import router as tax_router
+from app.db import get_sessionmaker
 from app.telemetry.setup import configure as configure_telemetry
+from app.telemetry.store import enable as enable_telemetry_store
+from app.telemetry.store import writer as telemetry_writer
 from app.wealth.router import router as wealth_router
 
-app = FastAPI(title="pak-tax-filer")
+# Request and AI-call telemetry queued for the database, unless TELEMETRY_STORE=off (feature 011;
+# tests set it off). The queue is written by a background task while the app runs.
+TELEMETRY_QUEUE = enable_telemetry_store(os.environ)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Run the telemetry writer while the app runs, if telemetry is saved."""
+    if TELEMETRY_QUEUE is None:
+        yield
+        return
+    async with telemetry_writer(get_sessionmaker(), TELEMETRY_QUEUE):
+        yield
+
+
+app = FastAPI(title="pak-tax-filer", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(documents_router)
@@ -27,6 +50,8 @@ app.include_router(workflow_router)
 app.include_router(reports_router)
 # Request and database spans to the logs, for developers (feature 008, US3).
 configure_telemetry(app)
+# The internal admin area at /admin (feature 011).
+build_admin(app, AppSessions())
 
 
 @app.exception_handler(RequestValidationError)

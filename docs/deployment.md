@@ -49,6 +49,7 @@ Create `.env` in `pak-tax-filer/` with `nano .env`. It is never committed:
 SITE_ADDRESS=34-123-45-67.sslip.io
 POSTGRES_PASSWORD=<a long random password: run `openssl rand -hex 24` and paste the output>
 GEMINI_API_KEY=<your key from Google AI Studio>
+ADMIN_SECRET_KEY=<another long random value: `openssl rand -hex 32`>
 ```
 
 Then `chmod 600 .env`, so only your user can read it.
@@ -62,6 +63,14 @@ docker compose -f docker-compose.prod.yml exec backend python -m app.cli create-
 
 The first build takes several minutes. Then open `https://34-123-45-67.sslip.io` and log in,
 or choose **Create an account** (the `create-user` command is optional).
+
+The internal admin area is at `https://34-123-45-67.sslip.io/admin` (feature 011). Admin accounts
+are staff-only and made only from the command line (a new account each time; you're asked for the
+password twice; at least 12 characters):
+
+```bash
+docker compose -f docker-compose.prod.yml exec backend python -m app.cli create-admin --email you@example.com
+```
 
 Build the tax assistant's corpus (feature 006): it downloads FBR's texts, checks each against
 its checksum in `app/rag/sources.yaml` and embeds them with Gemini (about 45 passages, under a

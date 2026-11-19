@@ -35,10 +35,15 @@ stack. From the repository root:
 ```bash
 docker compose -p pak-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
 docker compose -p pak-e2e -f docker-compose.yml -f docker-compose.e2e.yml exec backend alembic upgrade head
+# The admin admin.spec.ts signs in as (feature 011; synthetic, e2e stack only). Once per stack:
+printf 'e2e-admin-password-not-real\ne2e-admin-password-not-real\n' | docker compose -p pak-e2e -f docker-compose.yml -f docker-compose.e2e.yml exec -T backend python -m app.cli create-admin --email e2e-admin@example.com
 cd e2e && npm ci && npx playwright install chromium   # once
 npx playwright test                                   # about 10 seconds; the app at :15173
 docker compose -p pak-e2e -f docker-compose.yml -f docker-compose.e2e.yml down -v   # when done
 ```
+
+On Windows, run the `printf` line from Git Bash: PowerShell's pipe changes the line endings, so
+the two passwords don't match.
 
 If the build stops with "additional privileges requested: pass --allow=fs.read=…" (newer
 buildx, seen with v0.38 on Docker Desktop), set `BUILDX_BAKE_ENTITLEMENTS_FS=0` for that

@@ -3,6 +3,8 @@
 Every feature's API contract (`specs/NNN-*/contracts/`) and every backend endpoint follow these
 rules. Source: [specs/001-repo-foundations/contracts/api-conventions.md](../specs/001-repo-foundations/contracts/api-conventions.md).
 
+- **Not covered:** the admin area's server-rendered pages under `/admin` (feature 011) are not
+  part of the JSON API; their contract is `specs/011-admin-area/contracts/admin-pages.md`.
 - **Paths:** all endpoints under `/api/`, grouped by area (`/api/auth/...`,
   `/api/documents/...`); plural nouns for collections; no verbs except for actions such as
   `/api/auth/login`. The one exception is the infrastructure probe `GET /health`

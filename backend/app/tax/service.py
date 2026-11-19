@@ -20,14 +20,6 @@ BLOCKED_MESSAGES = {
     "needs_atl_answer": "Set your ATL status in your profile.",
     "no_confirmed_salary_certificate": "Upload and confirm your salary certificate first.",
     "profit_over_limit": "Bank profit over Rs 5,000,000 isn't supported yet.",
-    "salary_share_ambiguous": (
-        "Your situation needs a tax practitioner: your salary isn't clearly more than 75% of "
-        "your taxable income."
-    ),
-    "surcharge_ambiguous": (
-        "Your situation needs a tax practitioner: whether the surcharge applies depends on how "
-        "your bank profit is counted."
-    ),
 }
 
 

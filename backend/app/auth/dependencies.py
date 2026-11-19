@@ -22,7 +22,8 @@ async def current_user(
 ) -> User:
     """The logged-in user, from the `session` cookie; 401 otherwise."""
     user = await get_user_for_token(db, session) if session else None
-    if user is None:
+    # An admin's or a disabled account's session opens nothing here (feature 011, FR-002).
+    if user is None or not user.can_use_app:
         # An expired session may have just been deleted; keep that deletion.
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, NOT_LOGGED_IN)

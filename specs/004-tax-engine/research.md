@@ -42,6 +42,8 @@ Each decision: what was chosen, why, and what else was considered. Legal sources
   - summed bank profit > Rs 5,000,000;
   - salary share > 75% with and without bank profit in taxable income gives different answers;
   - taxable income > Rs 10,000,000 with and without bank profit gives different answers.
+  *(Amended 2026-11-17: these last two are removed; s.8(1)(a) keeps bank profit out of taxable
+  income, so taxable income is salary alone. See FR-012.)*
   Each provisional rule is a named constant in one place so it can be changed when the lead
   answers.
 

@@ -63,7 +63,9 @@ that counts. When they do, `summary` drops its "so" and says each amount is roun
 ```
 
 `blocked_reason` values: `needs_atl_answer`, `no_confirmed_salary_certificate`,
-`profit_over_limit`, `salary_share_ambiguous`, `surcharge_ambiguous`.
+`profit_over_limit`. (`salary_share_ambiguous` and `surcharge_ambiguous` were removed on 2026-11-17:
+bank profit under s.7B is a final tax outside taxable income, s.8(1)(a), so it changes neither the
+75% test nor the Rs 10 million surcharge limit, which is checked on salary alone.)
 
 ## GET /api/tax/{tax_year}/summary (removed 2026-11-16)
 

@@ -92,7 +92,8 @@ async def login(body: LoginRequest, response: Response, db: DbSession) -> EmailR
     password_ok = await passwords.check_password(
         body.password, user.password_hash if user else DUMMY_HASH
     )
-    if user is None or not password_ok:
+    # Admins and disabled accounts get a wrong password's answer (feature 011, FR-002).
+    if user is None or not password_ok or not user.can_use_app:
         await throttle.record_failure(db, email)
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_LOGIN)

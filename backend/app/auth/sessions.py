@@ -20,14 +20,17 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-async def create_session(db: AsyncSession, user: User) -> str:
-    """Start a session for the user and return the token for the cookie."""
+async def create_session(
+    db: AsyncSession, user: User, lifetime: timedelta = SESSION_LIFETIME
+) -> str:
+    """Start a session for the user and return the token for the cookie. The admin area asks for
+    a shorter `lifetime` (feature 011: 8 hours)."""
     token = secrets.token_urlsafe(32)
     db.add(
         Session(
             user_id=user.id,
             token_hash=_hash_token(token),
-            expires_at=datetime.now(UTC) + SESSION_LIFETIME,
+            expires_at=datetime.now(UTC) + lifetime,
         )
     )
     await db.flush()

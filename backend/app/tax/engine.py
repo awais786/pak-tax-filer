@@ -89,7 +89,10 @@ def salary_band(rates: TaxYearRates, taxable_salary: Decimal) -> Band:
 def blocked_reason(inputs: TaxInputs, rates: TaxYearRates) -> str | None:
     """Why the calculation must be refused, if it must (research R4; checked in this order).
 
-    The last three are provisional rules pending the lead's answers, each one place to change.
+    Provisional rule 3 (refuse when bank profit could change the 75% test or the Rs 10 million
+    surcharge limit) was removed on 2026-11-17: bank profit taxed under s.7B is a final tax and
+    not part of taxable income (s.8(1)(a); feature 010, research R5), so it changes neither.
+    With salary as the only income in taxable income, the salaried table always applies.
     """
     if inputs.atl is None:
         return "needs_atl_answer"
@@ -97,18 +100,12 @@ def blocked_reason(inputs: TaxInputs, rates: TaxYearRates) -> str | None:
         return "no_confirmed_salary_certificate"
     if inputs.gross_profit > rates.profit_limit.value:
         return "profit_over_limit"  # Provisional rule 1: s.7B stops applying; don't guess.
-    salary = inputs.taxable_salary
-    threshold = rates.salary_share_threshold.value
-    with_profit = salary > threshold * (salary + inputs.gross_profit)
-    without_profit = salary > threshold * salary
-    # Provisional rule 3: calculate only when both readings say the salaried table applies.
-    # (Both saying it doesn't means the case is outside this app's scope: same refusal.)
-    if not (with_profit and without_profit):
-        return "salary_share_ambiguous"
-    limit = rates.surcharge_threshold.value
-    if (salary + inputs.gross_profit > limit) != (salary > limit):
-        return "surcharge_ambiguous"
     return None
+
+
+def taxable_income(inputs: TaxInputs) -> Decimal:
+    """Taxable income: the salary. Bank profit under s.7B is final, outside it (s.8(1)(a))."""
+    return inputs.taxable_salary
 
 
 def calculate(inputs: TaxInputs, rates: TaxYearRates) -> TaxResult:
@@ -121,9 +118,8 @@ def calculate(inputs: TaxInputs, rates: TaxYearRates) -> TaxResult:
     band, salary_tax = slab_tax(rates.salary_bands, inputs.taxable_salary)
     row = rates.salary_bands.index(band)
 
-    income = inputs.taxable_salary + inputs.gross_profit
     surcharge = Decimal(0)
-    if income > rates.surcharge_threshold.value:
+    if taxable_income(inputs) > rates.surcharge_threshold.value:
         surcharge = rates.surcharge_rate.value * salary_tax
 
     profit_tax = rates.profit_rate.value * inputs.gross_profit
@@ -172,7 +168,7 @@ def _steps(
     """The salary tax, surcharge, profit tax and salary-side steps."""
     salary_tax, surcharge, profit_tax, salary_balance = exact
     band = rates.salary_bands[row]
-    income = inputs.taxable_salary + inputs.gross_profit
+    income = taxable_income(inputs)
     limit = rates.surcharge_threshold
     if surcharge:
         surcharge_text = (

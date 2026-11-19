@@ -25,8 +25,6 @@ BLOCKED_REASONS = {
     "needs_atl_answer",
     "no_confirmed_salary_certificate",
     "profit_over_limit",
-    "salary_share_ambiguous",
-    "surcharge_ambiguous",
 }
 
 

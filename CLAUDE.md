@@ -96,6 +96,8 @@ The constitution (`.specify/memory/constitution.md`) overrides everything else. 
   without refusing, use `get_profile`. Never add identity fields (name, CNIC, NTN) to the profile.
 - State-changing endpoints depend on `require_json` (JSON only, research R3 of feature 002).
 - Never log, return or store a password or session token; only their hashes are stored.
+- Admin accounts (feature 011) are staff-only and made with `python -m app.cli create-admin`:
+  `User.can_use_app` refuses them, and disabled accounts, in the app; see `backend/CLAUDE.md`.
 - Accounts: visitors sign up at `/signup` (`POST /api/auth/signup`, reusing `create_user`). For
   scripts: `docker compose exec backend python -m app.cli create-user --email demo@example.com`
   (prompts for the password twice).

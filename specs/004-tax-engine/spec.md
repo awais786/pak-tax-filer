@@ -167,7 +167,9 @@ fixed amount by 1 rupee and confirm the consistency check fails.
 - **FR-012**: The system MUST refuse to calculate, with a reason, when the user has no taxpayer profile,
   no confirmed salary certificate exists, summed bank profit exceeds Rs 5 million, or the 75%
   salary condition or the Rs 10 million surcharge limit gives different answers with and without
-  bank profit. *(The last three are provisional, pending the lead.)*
+  bank profit. *(The last three are provisional, pending the lead.) Amended 2026-11-17: the last
+  two are removed. Bank profit under s.7B is a final tax outside taxable income (s.8(1)(a); feature
+  010, research R5), so the 75% test and the surcharge limit use salary alone and never disagree.*
 - **FR-013**: For users not on the ATL, any bank withholding above the profit tax MUST be labelled
   "extra tax withheld; whether it can be reclaimed needs confirmation". *(Provisional.)*
 - **FR-014**: Every result MUST carry a visible "not yet practitioner-reviewed; not tax advice"

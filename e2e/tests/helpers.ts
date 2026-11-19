@@ -88,17 +88,18 @@ export async function confirmEveryFigure(page: Page): Promise<void> {
 
 /** The same user and confirmed certificate set up through the API, for tests about later pages
  * (tax.spec.ts proves the UI path). `page.request` shares the page's cookies, so the browser is
- * then logged in as this user. Rs 1,800,000 taxable, Rs 75,000 deducted. */
-export async function apiUserWithConfirmedSalary(page: Page): Promise<void> {
+ * then logged in as this user. Rs 1,800,000 taxable, Rs 75,000 deducted. Returns the email. */
+export async function apiUserWithConfirmedSalary(page: Page): Promise<string> {
   const api = page.request;
   const ok = async (response: Promise<APIResponse>) => {
     const reply = await response;
     expect(reply.ok(), `${reply.url()}: ${reply.status()}`).toBe(true);
     return reply;
   };
+  const email = newEmail();
   await ok(
     api.post("/api/auth/signup", {
-      data: { email: newEmail(), password: PASSWORD },
+      data: { email, password: PASSWORD },
     }),
   );
   await ok(
@@ -130,6 +131,7 @@ export async function apiUserWithConfirmedSalary(page: Page): Promise<void> {
     );
   }
   await ok(api.post(`/api/documents/${id}/confirm`, { data: {} }));
+  return email;
 }
 
 export const LABEL = "Not yet reviewed by a tax practitioner. Not tax advice.";

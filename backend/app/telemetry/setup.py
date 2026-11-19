@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.utils import is_instrumentation_enabled
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import (
@@ -153,6 +154,8 @@ def _before(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     conn: Any, cursor: Any, statement: str, parameters: Any, context: Any, executemany: bool
 ) -> None:
     del conn, cursor, parameters, executemany
+    if not is_instrumentation_enabled():
+        return  # e.g. the telemetry writer's own inserts (feature 011): no span, no loop
     words = statement.split(None, 1)
     operation = words[0].upper() if words else ""
     span = _db_tracer.start_span(

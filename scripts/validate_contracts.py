@@ -326,10 +326,12 @@ def load_app() -> dict[str, Any]:
 
         # Each models module registers its tables on Base.metadata (as alembic/env.py does).
         for area in (
+            "admin",
             "auth",
             "documents",
             "profile",
             "rag",
+            "telemetry",
             "tokens",
             "wealth",
             "workflow",

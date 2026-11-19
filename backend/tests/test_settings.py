@@ -1,10 +1,11 @@
 """app.settings: configuration from the environment (feature 002, task T004, research R2)."""
 
+import os
 from pathlib import Path
 
 import pytest
 
-from app.settings import load_settings
+from app.settings import load_settings, telemetry_store
 
 DB = "postgresql+asyncpg://user:pass@db:5432/example"
 
@@ -161,3 +162,45 @@ def test_telemetry_goes_to_the_logs_by_default_and_can_be_switched_off() -> None
     assert load_settings({**env, "OTEL_EXPORTER": " NONE "}).otel_exporter == "none"
     with pytest.raises(ValueError, match="OTEL_EXPORTER"):
         load_settings({**env, "OTEL_EXPORTER": "jaeger"})
+
+
+# ---- Feature 011: the admin area ----
+
+
+def test_admin_secret_key_is_optional() -> None:
+    """Fails if a missing ADMIN_SECRET_KEY stops the app (the library then makes a start-up key,
+    research R3) or an empty one counts as a key."""
+    assert load_settings({"DATABASE_URL": DB}).admin_secret_key is None
+    assert load_settings({"DATABASE_URL": DB, "ADMIN_SECRET_KEY": "  "}).admin_secret_key is None
+
+
+def test_admin_secret_key_is_read_and_never_printed() -> None:
+    """Fails if the key isn't read, or appears when the settings are printed or logged."""
+    settings = load_settings({"DATABASE_URL": DB, "ADMIN_SECRET_KEY": "synthetic-admin-key"})
+
+    assert settings.admin_secret_key == "synthetic-admin-key"
+    assert "synthetic-admin-key" not in repr(settings)
+
+
+def test_telemetry_store_defaults_to_on() -> None:
+    """Fails if saved telemetry is off unless asked for (FR-019: on in dev and production)."""
+    assert load_settings({"DATABASE_URL": DB}).telemetry_store is True
+    assert telemetry_store({}) is True
+
+
+@pytest.mark.parametrize(("value", "expected"), [("on", True), ("off", False), (" OFF ", False)])
+def test_telemetry_store_is_read(value: str, expected: bool) -> None:
+    """Fails if TELEMETRY_STORE isn't honoured (tests set it off, FR-023)."""
+    assert load_settings({"DATABASE_URL": DB, "TELEMETRY_STORE": value}).telemetry_store is expected
+    assert telemetry_store({"TELEMETRY_STORE": value}) is expected
+
+
+def test_unrecognised_telemetry_store_value_is_refused() -> None:
+    """Fails if a typo silently picks a setting."""
+    with pytest.raises(ValueError, match="TELEMETRY_STORE"):
+        telemetry_store({"TELEMETRY_STORE": "of"})
+
+
+def test_tests_run_without_saving_telemetry() -> None:
+    """Fails if the test suite saves telemetry unless a test turns it on (FR-023)."""
+    assert os.environ.get("TELEMETRY_STORE") == "off"

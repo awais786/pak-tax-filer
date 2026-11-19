@@ -141,6 +141,8 @@ the Tenth Schedule, rule 1 doubles it for a person not on the ATL: **40%**. Same
 Rs 10 million limit. s.8(1)(a) answers that question: bank profit taxed under s.7B is not in
 taxable income. The calculator follows the law; the Tax page is out of this feature's scope
 (FR-005) and keeps its provisional refusal until the lead decides. Raised in the PR.
+*Resolved 2026-11-17 (Saifullah): the Tax page and guided run now follow s.8(1)(a) too; both
+provisional refusals were removed from 004 (its FR-012).*
 
 ## R6. Bonus, and the order of the calculation
 

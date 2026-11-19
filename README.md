@@ -42,6 +42,12 @@ practitioner. Nothing in this app is tax advice until that changes.
   mandatory human-approval gate before calculation. Built as an agentic
   workflow, then made plain code on 2026-11-16: no AI where no reasoning is
   needed.
+- An internal admin area at `/admin` (feature 011) for the team running the app:
+  staff-only accounts made from the command line; accounts, documents,
+  results, guided runs, the law library and saved telemetry; four account
+  actions (disable or re-enable, delete, sign out everywhere, reset the daily
+  reading limit); an audit log of every action and account view. Admins never
+  change a user's figures.
 
 **Out (for now):** freelance, business, capital gains and other incomes;
 deductions and credits (Zakat, donations, pension); TY2027; companies and
@@ -118,6 +124,12 @@ command line (synthetic data only; you're asked for the password twice):
 
 ```bash
 docker compose exec backend python -m app.cli create-user --email demo@example.com
+```
+
+The admin area is at http://localhost:5173/admin. Create an admin (a new, staff-only account):
+
+```bash
+docker compose exec backend python -m app.cli create-admin --email admin@example.com
 ```
 
 If you use Claude Code, also install the tools its hooks run on your machine:
